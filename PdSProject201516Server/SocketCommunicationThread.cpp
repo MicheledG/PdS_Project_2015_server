@@ -269,7 +269,7 @@ int SendFocusChangeMsg(HWND hwndAppId, SOCKET destSocket) {
 	if (iteratorAppGainingFocus == mapWndAltTabApp.end())
 		return -1; //error created app not found into the list
 
-	jAppList[0] = CreateJAppObject(iteratorAppGainingFocus->first, iteratorAppGainingFocus->second);
+	jAppList[0] = CreateJAppObject(iteratorAppGainingFocus->first, iteratorAppGainingFocus->second, true);
 
 	jMsg[U("app_list")] = jAppList;
 	jMsg[U("app_number")] = web::json::value::number(1);
