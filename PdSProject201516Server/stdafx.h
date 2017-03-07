@@ -16,6 +16,7 @@
 #include <Psapi.h>
 #include <shellapi.h>
 #include <gdiplus.h>
+#include <dwmapi.h>
 
 // C RunTime Header Files
 #include <stdlib.h>

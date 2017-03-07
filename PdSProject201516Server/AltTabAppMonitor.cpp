@@ -1,15 +1,13 @@
 #include "stdafx.h"
 #include "AltTabAppMonitor.h"
 #include "AltTabApp.h"
+#include "MapHWNDAltTabApp.h"
 
 //define global variable
-std::map<HWND, AltTabApp> mapWndAltTabApp;
-std::mutex mMapWndAltTabApp;
-std::condition_variable cvMapChanged;
-event_type notifyEvent = event_type::NO_EVENT;
-HWND hwndEvent = NULL; //value on 4 bytes to identify the window
-std::atomic<bool> active(true);
-
+MapHWNDAltTabApp mapWndAltTabApp;
+//event_type notifyEvent = event_type::NO_EVENT;
+//HWND hwndEvent = NULL; //value on 4 bytes to identify the window
+//std::atomic<bool> active(true);
 HWND hwndLastFocus = NULL;
 HWINEVENTHOOK EventHookFocus;
 
@@ -17,20 +15,19 @@ HWINEVENTHOOK EventHookFocus;
    and install the WinEvent hook to detect window creation, destruction and focus change */
 void InitAltTabAppMonitor()
 {	
-	
 	//group already opened Alt-Tab windows
- 	BOOL result = EnumWindows(AddAltTabAppInMap, NULL);
+ 	BOOL result = EnumWindows(HandleWinDetected, NULL);
 	if (result == FALSE) return;
 
-	//initialize first window with focus
+	//initialize first focus
 	hwndLastFocus = GetForegroundWindow();
-	if (hwndLastFocus != NULL && mapWndAltTabApp.find(hwndLastFocus) != mapWndAltTabApp.end())
-		mapWndAltTabApp.find(hwndLastFocus)->second.SetFocus(true);
+	if (hwndLastFocus != NULL && mapWndAltTabApp.containsHWND(hwndLastFocus))
+		mapWndAltTabApp.findHWND(hwndLastFocus)->second.SetFocus(true);
 
 	//install the win event hook procedure
 	EventHookFocus = SetWinEventHook(
-		EVENT_SYSTEM_FOREGROUND, //MIN EVENT NUMBER CHECKED
-		EVENT_OBJECT_DESTROY, //MAX EVENT NUMBER CHECKED
+		EVENT_MIN, //MIN EVENT NUMBER CHECKED
+		EVENT_MAX, //MAX EVENT NUMBER CHECKED
 		NULL,
 		HandleWinEvent,
 		0, 0, //all threads all processes
@@ -41,22 +38,23 @@ void InitAltTabAppMonitor()
 	return;
 }
 
-/* add a valid alt-tab window to the map */
-BOOL CALLBACK AddAltTabAppInMap(HWND hWnd, LPARAM ptr)
+/* manage the window returned by EnumWindows -> insert in map or not */
+BOOL CALLBACK HandleWinDetected(HWND hwnd, LPARAM ptr)
 {
-	std::lock_guard<std::mutex> lg(mMapWndAltTabApp);
-	//check if it is window already into map (faster operation)
-	if (mapWndAltTabApp.find(hWnd) != mapWndAltTabApp.end()) return TRUE;
-	//check if is an Alt-Tab window (more power and resource consuming)
-	AltTabApp app(hWnd);
-	if (app.GetwHnd() == NULL) return TRUE;
-
-	//add to the map
-	mapWndAltTabApp.insert(pairWndAltTabApp(hWnd, app));
-	notifyEvent = event_type::APP_CREATION_EVENT;
-	hwndEvent = hWnd;
-	cvMapChanged.notify_one();
-
+	/* check if the app is already into the map*/
+	if (mapWndAltTabApp.containsHWND(hwnd))
+		/*the app is already into the map*/
+		return TRUE;
+	
+	/* create the new app to insert into the map*/
+	AltTabApp newApp(hwnd);
+	
+	/* check if the creation went well*/
+	if (newApp.GethWnd() == NULL)
+		return TRUE;
+	
+	/* insert into the map */
+	mapWndAltTabApp.insertAltTapApp(hwnd, newApp);
 	return TRUE;
 }
 
@@ -70,46 +68,36 @@ void CALLBACK HandleWinEvent(
 	DWORD         dwEventThread,
 	DWORD         dwmsEventTime)
 {
-	std::unique_lock<std::mutex> ul(mMapWndAltTabApp);
-
 	switch (dwEvent)
 	{
-		case EVENT_OBJECT_CREATE: //add the new window to the map
-			if (idObject == OBJID_WINDOW && idChild == CHILDID_SELF)
-				//check if it is a missing window into map
-				if (mapWndAltTabApp.find(hwnd) == mapWndAltTabApp.end()) {
-					//update map of opened window
-					ul.unlock();
-					EnumWindows(AddAltTabAppInMap, NULL);
-				}
+		case EVENT_OBJECT_CREATE: //creation event
+			//if (idObject == OBJID_WINDOW && idChild == CHILDID_SELF)
+				HandleWinDetected(hwnd, NULL);
 			break;
-		case EVENT_OBJECT_DESTROY: //delete the window from the map
-			if (idObject == OBJID_WINDOW && idChild == CHILDID_SELF) {
-				//window destruction event
-				//check if window is into the map
-				if (mapWndAltTabApp.find(hwnd) != mapWndAltTabApp.end()) {
-					mapWndAltTabApp.erase(hwnd);
-					notifyEvent = event_type::APP_DESTRUCTION_EVENT;
-					hwndEvent = hwnd;
-					cvMapChanged.notify_one();
-				}	
-			}	
+		case EVENT_OBJECT_DESTROY: //destruction event
+			//if (idObject == OBJID_WINDOW && idChild == CHILDID_SELF) {
+				/*check if the window is into the map*/
+				if (mapWndAltTabApp.containsHWND(hwnd))
+					/*remove app from the map*/
+					mapWndAltTabApp.eraseAltTabApp(hwnd);
+			//}
 			break;
-		case EVENT_SYSTEM_FOREGROUND:
-			//foreground window changed
-			//check if window is into the map
-			if (mapWndAltTabApp.find(hwnd) != mapWndAltTabApp.end()) {
-				//if last focus window is different from the gaining window focus (hwnd) and last focus window is still into the map
-				if (hwndLastFocus != hwnd && mapWndAltTabApp.find((HWND)hwndLastFocus) != mapWndAltTabApp.end())
-					mapWndAltTabApp.find(hwndLastFocus)->second.SetFocus(false);
+		case EVENT_SYSTEM_FOREGROUND: //foreground window changed event
+			//check if gaining focus window is into the map
+			if (mapWndAltTabApp.containsHWND(hwnd)) {
+				//check if last focus window is different from the gaining focus window and if last focus window is still into the map
+				if (hwndLastFocus != hwnd && mapWndAltTabApp.containsHWND((HWND)hwndLastFocus))
+					mapWndAltTabApp.findHWND(hwndLastFocus)->second.SetFocus(false);
 				//set focus to the gaining window
-				mapWndAltTabApp.find(hwnd)->second.SetFocus(true);
+				mapWndAltTabApp.findHWND(hwnd)->second.SetFocus(true);
 				//update last focus
 				hwndLastFocus = hwnd;
-				notifyEvent = event_type::FOCUS_CHANGE_EVENT;
-				hwndEvent = hwnd;
-				cvMapChanged.notify_one();
+				//notifyEvent = event_type::FOCUS_CHANGE_EVENT;
+				//hwndEvent = hwnd;
+				//cvMapChanged.notify_one();
 			}
+			//TO DO
+			/* till now I do simple management for new focus on window not in list -> ignoring, may be problem on last focus */
 			break;
 		default:
 			break;
@@ -121,6 +109,5 @@ void CALLBACK HandleWinEvent(
 void StopAltTabAppMonitor() {
 	/* release all the resources!!! */
 	//TODO: uninstall the hook!
-	std::lock_guard<std::mutex> lg(mMapWndAltTabApp);
-	mapWndAltTabApp.clear();
+	mapWndAltTabApp.clearMap();
 }

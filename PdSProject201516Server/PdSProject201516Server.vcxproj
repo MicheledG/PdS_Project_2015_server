@@ -95,7 +95,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>version.lib;Ws2_32.lib;Gdiplus.lib;Crypt32.lib;User32.lib;Shell32.lib;Ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>version.lib;Ws2_32.lib;Gdiplus.lib;Crypt32.lib;User32.lib;Dwmapi.lib;Shell32.lib;Ole32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -126,7 +126,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>version.lib;Ws2_32.lib;Gdiplus.lib;Crypt32.lib;User32.lib;Shell32.lib;Ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>version.lib;Ws2_32.lib;Gdiplus.lib;Crypt32.lib;User32.lib;Dwmapi.lib;Shell32.lib;Ole32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -153,18 +153,18 @@
     <ClInclude Include="..\..\PdSProject201516ServerDLL\PdSProject201516ServerDLL\PdSProject201516ServerDLL.h" />
     <ClInclude Include="AltTabApp.h" />
     <ClInclude Include="AltTabAppMonitor.h" />
+    <ClInclude Include="MapHWNDAltTabApp.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="PdSProject201516Server.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="SocketCommunicationThread.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AltTabApp.cpp" />
     <ClCompile Include="AltTabAppMonitor.cpp" />
+    <ClCompile Include="MapHWNDAltTabApp.cpp" />
     <ClCompile Include="PdSProject201516Server.cpp" />
-    <ClCompile Include="SocketCommunicationThread.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

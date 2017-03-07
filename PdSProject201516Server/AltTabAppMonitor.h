@@ -2,6 +2,7 @@
 
 #include "stdafx.h"
 #include "AltTabApp.h"
+#include "MapHWNDAltTabApp.h"
 
 enum event_type {
 	APP_CREATION_EVENT,
@@ -11,17 +12,16 @@ enum event_type {
 };
 
 //declare global variables
-extern std::map<HWND, AltTabApp> mapWndAltTabApp;
-extern std::mutex mMapWndAltTabApp;
-extern std::condition_variable cvMapChanged; //used to notify event to the socket thread
-extern event_type notifyEvent; //specify the event that generated the notification
-extern HWND hwndEvent; //specify the window that generated the event
-extern std::atomic<bool> active; //describe if the server application is still active
+extern MapHWNDAltTabApp mapWndAltTabApp;
+//extern std::condition_variable cvMapChanged; //used to notify event to the socket thread
+//extern event_type notifyEvent; //specify the event that generated the notification
+//extern HWND hwndEvent; //specify the window that generated the event
+//extern std::atomic<bool> active; //describe if the server application is still active
 
 // functions' declarations of AltTabAppMonitor module
 void InitAltTabAppMonitor();
 void StopAltTabAppMonitor();
-BOOL CALLBACK AddAltTabAppInMap(HWND hWnd, LPARAM ptr);
+BOOL CALLBACK HandleWinDetected(HWND hWnd, LPARAM ptr);
 void CALLBACK HandleWinEvent(
 	HWINEVENTHOOK hWinEventHook,
 	DWORD         dwEvent,

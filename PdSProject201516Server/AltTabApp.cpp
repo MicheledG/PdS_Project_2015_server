@@ -68,7 +68,7 @@ bool AltTabApp::GetFocus()
 	return focus;
 }
 
-HWND AltTabApp::GetwHnd()
+HWND AltTabApp::GethWnd()
 {
 	return hWnd;
 }
@@ -129,7 +129,7 @@ std::tstring AltTabApp::GettstrWndText()
 
 //check if the application (window application) is "alt-tab"
 bool AltTabApp::isAltTabApp(HWND hWnd)
-{	
+{		
 	TITLEBARINFO ti;
 	HWND hWndTry, hWndWalk = NULL;
 
@@ -148,24 +148,37 @@ bool AltTabApp::isAltTabApp(HWND hWnd)
 	if (hWndWalk != hWnd)
 		return false;
 
-	// the following removes some task tray programs and "Program Manager"
-	ti.cbSize = sizeof(ti);
-	GetTitleBarInfo(hWnd, &ti);
-	if (ti.rgstate[0] & STATE_SYSTEM_INVISIBLE)
-		return false;
+	bool isToolWindow = (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) == WS_EX_TOOLWINDOW;
+	bool isNotAppWindow = (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_APPWINDOW) != WS_EX_APPWINDOW;
+	int cloakedVal;
+	HRESULT hr = DwmGetWindowAttribute(hWnd, DWMWA_CLOAKED, &cloakedVal, sizeof(int));
+	if (hr != S_OK)
+	{
+		cloakedVal = 0;
+	}
+	bool isWin10Visible = cloakedVal != 0 ? false : true;
+	if (!(isToolWindow && isNotAppWindow) && isWin10Visible)
+		return true;
 
-	// Tool windows should not be displayed either, these do not appear in the
-	// task bar.
-	if (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW)
-		return false;
+	//// the following removes some task tray programs and "Program Manager"
+	//ti.cbSize = sizeof(ti);
+	//GetTitleBarInfo(hWnd, &ti);
+	//if (ti.rgstate[0] & STATE_SYSTEM_INVISIBLE)
+	//	return false;
+
+	//// Tool windows should not be displayed either, these do not appear in the
+	//// task bar.
+	//if (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW)
+	//	return false;
 	
-	return true;
+	return false;
 }
 
 HANDLE AltTabApp::GetThreadHandle(DWORD dwThrdId) {
 
 	HANDLE hThrd = OpenThread(
 		THREAD_ALL_ACCESS,
+		//READ_CONTROL,
 		TRUE, //children can inherit the handle
 		dwThrdId
 		);
@@ -178,6 +191,7 @@ HANDLE AltTabApp::GetProcHandle(DWORD dwProcId) {
 
 	HANDLE hProc = OpenProcess(
 		PROCESS_ALL_ACCESS,
+		//READ_CONTROL,
 		TRUE, //children can inherit the handle
 		dwProcId
 		);

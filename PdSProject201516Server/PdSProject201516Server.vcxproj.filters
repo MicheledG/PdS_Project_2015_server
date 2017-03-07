@@ -36,13 +36,13 @@
     <ClInclude Include="..\..\PdSProject201516ServerDLL\PdSProject201516ServerDLL\PdSProject201516ServerDLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SocketCommunicationThread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AltTabAppMonitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MapHWNDAltTabApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -56,10 +56,10 @@
     <ClCompile Include="AltTabApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SocketCommunicationThread.cpp">
+    <ClCompile Include="AltTabAppMonitor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AltTabAppMonitor.cpp">
+    <ClCompile Include="MapHWNDAltTabApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

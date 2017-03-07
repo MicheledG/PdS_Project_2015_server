@@ -53,7 +53,7 @@ public:
 	bool AttachAppMsgQueue(AttachModeT mode);
 	void SetFocus(bool hasFocus);
 	bool GetFocus();
-	HWND GetwHnd();
+	HWND GethWnd();
 	HANDLE GethThrd();
 	DWORD GetdwThrdId();
 	HANDLE GethProc();
@@ -63,5 +63,3 @@ public:
 	std::tstring GettstrAppName();
 	std::tstring GettstrWndText();
 };
-
-typedef std::pair<HWND, AltTabApp> pairWndAltTabApp;
