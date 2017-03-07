@@ -4,18 +4,6 @@
 #define MAX_FILENAMEEXLEN 1024
 #define MAX_WNDTEXTLEN 1024
 
-//bool isAltTabApp(HWND hWnd);
-//HANDLE GetThreadHandle(DWORD dwThrdId);
-//HANDLE GetProcHandle(DWORD dwProcId);
-//std::tstring GetAppName(HANDLE hProc);
-//byte* GetAppIconPng(HANDLE hProc, int *size);
-//int CreateStream(LPSTREAM *pIstream);
-//int GetAppHIcon(HANDLE hProc, HICON *appHIcon);
-//int GetAppBitmapStream(HICON appHIcon, IStream *pPngStream);
-//int SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream);
-//byte* SavePngStreamToPngByte(IStream* pPngStream, int *size);
-//int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
-
 AltTabApp::AltTabApp(HWND hWnd)
 {
 	if (!isAltTabApp(hWnd)) return; //let hWnd to NULL!

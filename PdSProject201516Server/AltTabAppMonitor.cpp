@@ -29,8 +29,8 @@ void InitAltTabAppMonitor()
 
 	//install the win event hook procedure
 	EventHookFocus = SetWinEventHook(
-		EVENT_MIN, //MIN EVENT NUMBER CHECKED
-		EVENT_MAX, //MAX EVENT NUMBER CHECKED
+		EVENT_SYSTEM_FOREGROUND, //MIN EVENT NUMBER CHECKED
+		EVENT_OBJECT_DESTROY, //MAX EVENT NUMBER CHECKED
 		NULL,
 		HandleWinEvent,
 		0, 0, //all threads all processes
