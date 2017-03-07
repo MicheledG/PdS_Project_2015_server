@@ -35,6 +35,18 @@ class AltTabApp
 	std::shared_ptr<byte> pPngIcon;
 	int iPngIconSize;
 	bool focus = false;
+	/* tool functions */
+	bool isAltTabApp(HWND hWnd);
+	HANDLE GetThreadHandle(DWORD dwThrdId);
+	HANDLE GetProcHandle(DWORD dwProcId);
+	std::tstring GetAppName(HANDLE hProc);
+	byte* GetAppIconPng(HANDLE hProc, int *size);
+	int CreateStream(LPSTREAM *pIstream);
+	int GetAppHIcon(HANDLE hProc, HICON *appHIcon);
+	int GetAppBitmapStream(HICON appHIcon, IStream *pPngStream);
+	int SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream);
+	byte* SavePngStreamToPngByte(IStream* pPngStream, int *size);
+	int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 public:
 	AltTabApp(HWND hWnd);
 	~AltTabApp();

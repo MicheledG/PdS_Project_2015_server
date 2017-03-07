@@ -152,7 +152,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\PdSProject201516ServerDLL\PdSProject201516ServerDLL\PdSProject201516ServerDLL.h" />
     <ClInclude Include="AltTabApp.h" />
-    <ClInclude Include="InitMonitorAltTabApp.h" />
+    <ClInclude Include="AltTabAppMonitor.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="PdSProject201516Server.h" />
     <ClInclude Include="Resource.h" />
@@ -162,7 +162,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AltTabApp.cpp" />
-    <ClCompile Include="InitMonitorAltTabApp.cpp" />
+    <ClCompile Include="AltTabAppMonitor.cpp" />
     <ClCompile Include="PdSProject201516Server.cpp" />
     <ClCompile Include="SocketCommunicationThread.cpp" />
     <ClCompile Include="stdafx.cpp">

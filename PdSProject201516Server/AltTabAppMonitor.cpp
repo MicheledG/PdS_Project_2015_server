@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "InitMonitorAltTabApp.h"
+#include "AltTabAppMonitor.h"
 #include "AltTabApp.h"
 
 //define global variable
@@ -15,7 +15,7 @@ HWINEVENTHOOK EventHookFocus;
 
 /* make a first search of the already opened windows
    and install the WinEvent hook to detect window creation, destruction and focus change */
-void InitMonitorAltTabApp()
+void InitAltTabAppMonitor()
 {	
 	
 	//group already opened Alt-Tab windows
@@ -118,9 +118,9 @@ void CALLBACK HandleWinEvent(
 	return;
 }
 
-void StopMonitorAltTabApp() {
-	//TODO: unistall the hook!
+void StopAltTabAppMonitor() {
 	/* release all the resources!!! */
+	//TODO: uninstall the hook!
 	std::lock_guard<std::mutex> lg(mMapWndAltTabApp);
 	mapWndAltTabApp.clear();
 }

@@ -4,17 +4,17 @@
 #define MAX_FILENAMEEXLEN 1024
 #define MAX_WNDTEXTLEN 1024
 
-bool isAltTabApp(HWND hWnd);
-HANDLE GetThreadHandle(DWORD dwThrdId);
-HANDLE GetProcHandle(DWORD dwProcId);
-std::tstring GetAppName(HANDLE hProc);
-byte* GetAppIconPng(HANDLE hProc, int *size);
-int CreateStream(LPSTREAM *pIstream);
-int GetAppHIcon(HANDLE hProc, HICON *appHIcon);
-int GetAppBitmapStream(HICON appHIcon, IStream *pPngStream);
-int SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream);
-byte* SavePngStreamToPngByte(IStream* pPngStream, int *size);
-int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
+//bool isAltTabApp(HWND hWnd);
+//HANDLE GetThreadHandle(DWORD dwThrdId);
+//HANDLE GetProcHandle(DWORD dwProcId);
+//std::tstring GetAppName(HANDLE hProc);
+//byte* GetAppIconPng(HANDLE hProc, int *size);
+//int CreateStream(LPSTREAM *pIstream);
+//int GetAppHIcon(HANDLE hProc, HICON *appHIcon);
+//int GetAppBitmapStream(HICON appHIcon, IStream *pPngStream);
+//int SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream);
+//byte* SavePngStreamToPngByte(IStream* pPngStream, int *size);
+//int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 
 AltTabApp::AltTabApp(HWND hWnd)
 {
@@ -40,7 +40,7 @@ AltTabApp::AltTabApp(HWND hWnd)
 		return;
 	}
 
-	//get AppName
+	//get application name
 	tstrAppName.assign(GetAppName(hProc));
 	if (tstrAppName.empty()) {
 		//impossible to retrieve app name
@@ -48,14 +48,13 @@ AltTabApp::AltTabApp(HWND hWnd)
 		return;
 	}
 
-	//get AppIcon in png format into a byte[]
+	//get application icon in png format into a byte[]
 	pPngIcon = std::shared_ptr<byte>(GetAppIconPng(hProc, &iPngIconSize), [](byte* ptr) {delete[] ptr; });
 
 	//default focus status
 	focus = false;
 
 	return;
-
 }
 
 AltTabApp::~AltTabApp()
@@ -141,7 +140,7 @@ std::tstring AltTabApp::GettstrWndText()
 }
 
 //check if the application (window application) is "alt-tab"
-bool isAltTabApp(HWND hWnd)
+bool AltTabApp::isAltTabApp(HWND hWnd)
 {	
 	TITLEBARINFO ti;
 	HWND hWndTry, hWndWalk = NULL;
@@ -175,7 +174,7 @@ bool isAltTabApp(HWND hWnd)
 	return true;
 }
 
-HANDLE GetThreadHandle(DWORD dwThrdId) {
+HANDLE AltTabApp::GetThreadHandle(DWORD dwThrdId) {
 
 	HANDLE hThrd = OpenThread(
 		THREAD_ALL_ACCESS,
@@ -187,7 +186,7 @@ HANDLE GetThreadHandle(DWORD dwThrdId) {
 
 }
 
-HANDLE GetProcHandle(DWORD dwProcId) {
+HANDLE AltTabApp::GetProcHandle(DWORD dwProcId) {
 
 	HANDLE hProc = OpenProcess(
 		PROCESS_ALL_ACCESS,
@@ -198,7 +197,7 @@ HANDLE GetProcHandle(DWORD dwProcId) {
 	return hProc;
 }
 
-std::tstring GetAppName(HANDLE hProc)
+std::tstring AltTabApp::GetAppName(HANDLE hProc)
 {
 	std::tstring tstrAppName;
 
@@ -240,12 +239,14 @@ std::tstring GetAppName(HANDLE hProc)
 		return tstrAppName;
 	}
 
-	//extract file description (application name) from the resource file with the right language-codepage
+	//create the query to extract file description (application name) from the resource file with the right language-codepage
 	TCHAR queriedValue[MAX_FILENAMEEXLEN];
 	if (FAILED(StringCchPrintf(queriedValue, MAX_FILENAMEEXLEN, L"\\StringFileInfo\\%04x%04x\\FileDescription", translationInfo[0], translationInfo[1]))) {
 		tstrAppName.assign(TEXT("Error creating the query to obtain the file description"));
 		return tstrAppName;
 	}
+	
+	//extract file description (application name)
 	TCHAR* appName = NULL;
 	PUINT ptrAppNameBufferLen = NULL;
 	if (!VerQueryValue(fileVersionInfoPtr.get(), queriedValue, (LPVOID*)&appName, ptrAppNameBufferLen)) {
@@ -255,8 +256,9 @@ std::tstring GetAppName(HANDLE hProc)
 		appName = &fileNameEx[pos + 1];
 	}
 
-	//filter out the Application Frame Host windows
 	tstrAppName.assign(appName);
+	
+	//filter out the Application Frame Host windows
 	int comparison = tstrAppName.compare(L"Application Frame Host");
 	if (comparison == 0) {
 		tstrAppName.assign(std::tstring());
@@ -265,7 +267,7 @@ std::tstring GetAppName(HANDLE hProc)
 	return tstrAppName;
 }
 
-byte* GetAppIconPng(HANDLE hProc, int *size) {
+byte* AltTabApp::GetAppIconPng(HANDLE hProc, int *size) {
 
 	IStream *pPngStream = nullptr;
 	if (CreateStream(&pPngStream) == -1)
@@ -294,7 +296,7 @@ byte* GetAppIconPng(HANDLE hProc, int *size) {
 	return pPngByte;
 }
 
-int CreateStream(LPSTREAM *pIstream) {
+int AltTabApp::CreateStream(LPSTREAM *pIstream) {
 
 	HRESULT result = CreateStreamOnHGlobal(
 		NULL,
@@ -308,7 +310,7 @@ int CreateStream(LPSTREAM *pIstream) {
 		return 1;
 }
 
-int GetAppHIcon(HANDLE hProc, HICON *appHIcon)
+int AltTabApp::GetAppHIcon(HANDLE hProc, HICON *appHIcon)
 {
 	//obtain name of the executable file
 	TCHAR fileNameEx[MAX_FILENAMEEXLEN];
@@ -329,7 +331,7 @@ int GetAppHIcon(HANDLE hProc, HICON *appHIcon)
 	return 1;
 }
 
-int GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
+int AltTabApp::GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
 	
 	/* startup Gdiplus to extract bitmap bytes from video memory */
 	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
@@ -358,7 +360,7 @@ int GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
 }
 
 
-int SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream) {
+int AltTabApp::SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream) {
 
 	CLSID pngClsid;
 	if (GetEncoderClsid(L"image/png", &pngClsid) == -1)
@@ -371,7 +373,7 @@ int SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream) {
 	return 1;
 }
 
-byte* SavePngStreamToPngByte(IStream* pPngStream, int *size) {
+byte* AltTabApp::SavePngStreamToPngByte(IStream* pPngStream, int *size) {
 
 	STATSTG stat;
 	HRESULT result = pPngStream->Stat(&stat, STATFLAG_NONAME);
@@ -395,7 +397,7 @@ byte* SavePngStreamToPngByte(IStream* pPngStream, int *size) {
 	return pPngByte;
 }
 
-int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
+int AltTabApp::GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 {
 	UINT  num = 0;          // number of image encoders
 	UINT  size = 0;         // size of the image encoder array in bytes

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "SocketCommunicationThread.h"
 #include "AltTabApp.h"
-#include "InitMonitorAltTabApp.h"
+#include "AltTabAppMonitor.h"
 
 #define DEFAULT_PORT "27015"
 

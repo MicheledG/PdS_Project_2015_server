@@ -3,8 +3,8 @@
 
 #include "stdafx.h"
 #include "PdSProject201516Server.h"
-#include "InitMonitorAltTabApp.h"
-#include "SocketCommunicationThread.h"
+#include "AltTabAppMonitor.h"
+//#include "SocketCommunicationThread.h"
 
 #define MAX_LOADSTRING 100
 #define WM_USER_SHELLICON WM_USER + 1
@@ -15,7 +15,7 @@ WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 NOTIFYICONDATA nidMyTrayIcon;
 HMENU hPopMenu;
-std::thread SocketThread;
+//std::thread SocketThread;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -32,8 +32,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
 	// TODO: Place code here.
-	InitMonitorAltTabApp();
-	SocketThread = std::thread(SocketCommunicationThread);
+	InitAltTabAppMonitor();
+	//SocketThread = std::thread(SocketCommunicationThread);
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -185,12 +185,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
-        // TO DO!
 		/* close all the resources here! */
-		active.store(false);
-		SocketThread.join();
-		//still have to delete the entire map!
-		StopMonitorAltTabApp();
+		// TO DO!
+		//active.store(false);
+		//SocketThread.join();
+		StopAltTabAppMonitor();
 		PostQuitMessage(0);
         break;
     default:

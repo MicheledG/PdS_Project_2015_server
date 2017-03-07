@@ -2,7 +2,6 @@
 
 #include "stdafx.h"
 #include "AltTabApp.h"
-#include "InitMonitorAltTabApp.h"
 
 enum event_type {
 	APP_CREATION_EVENT,
@@ -19,9 +18,9 @@ extern event_type notifyEvent; //specify the event that generated the notificati
 extern HWND hwndEvent; //specify the window that generated the event
 extern std::atomic<bool> active; //describe if the server application is still active
 
-// PERSONAL declarations of functions 
-void InitMonitorAltTabApp();
-void StopMonitorAltTabApp();
+// functions' declarations of AltTabAppMonitor module
+void InitAltTabAppMonitor();
+void StopAltTabAppMonitor();
 BOOL CALLBACK AddAltTabAppInMap(HWND hWnd, LPARAM ptr);
 void CALLBACK HandleWinEvent(
 	HWINEVENTHOOK hWinEventHook,
