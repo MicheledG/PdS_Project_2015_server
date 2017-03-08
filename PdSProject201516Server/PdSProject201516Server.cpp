@@ -15,6 +15,7 @@ WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 NOTIFYICONDATA nidMyTrayIcon;
 HMENU hPopMenu;
+std::thread AltTabAppMonitorThread;
 //std::thread SocketThread;
 
 // Forward declarations of functions included in this code module:
@@ -32,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
 	// TODO: Place code here.
-	InitAltTabAppMonitor();
+	AltTabAppMonitorThread = std::thread(AltTabAppMonitor);
 	//SocketThread = std::thread(SocketCommunicationThread);
 
     // Initialize global strings
@@ -187,9 +188,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
 		/* close all the resources here! */
 		// TO DO!
-		//active.store(false);
+		active.store(false);
 		//SocketThread.join();
-		StopAltTabAppMonitor();
+		AltTabAppMonitorThread.join();
 		PostQuitMessage(0);
         break;
     default:

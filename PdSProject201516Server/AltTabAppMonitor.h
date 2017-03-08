@@ -13,21 +13,24 @@ enum event_type {
 
 //declare global variables
 extern MapHWNDAltTabApp mapWndAltTabApp;
+extern std::atomic<bool> active; //describe if the server application is still active
+
 //extern std::condition_variable cvMapChanged; //used to notify event to the socket thread
 //extern event_type notifyEvent; //specify the event that generated the notification
 //extern HWND hwndEvent; //specify the window that generated the event
-//extern std::atomic<bool> active; //describe if the server application is still active
 
 // functions' declarations of AltTabAppMonitor module
-void InitAltTabAppMonitor();
-void StopAltTabAppMonitor();
+void AltTabAppMonitor();
 BOOL CALLBACK HandleWinDetected(HWND hWnd, LPARAM ptr);
-void CALLBACK HandleWinEvent(
-	HWINEVENTHOOK hWinEventHook,
-	DWORD         dwEvent,
-	HWND          hwnd,
-	LONG          idObject,
-	LONG          idChild,
-	DWORD         dwEventThread,
-	DWORD         dwmsEventTime
-	);
+
+//void InitAltTabAppMonitor();
+//void StopAltTabAppMonitor();
+//void CALLBACK HandleWinEvent(
+//	HWINEVENTHOOK hWinEventHook,
+//	DWORD         dwEvent,
+//	HWND          hwnd,
+//	LONG          idObject,
+//	LONG          idChild,
+//	DWORD         dwEventThread,
+//	DWORD         dwmsEventTime
+//	);
