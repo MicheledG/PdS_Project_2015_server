@@ -6,8 +6,8 @@ typedef std::pair<HWND, AltTabApp> pairWndAltTabApp;
 class MapHWNDAltTabApp
 {
 	std::map<HWND, AltTabApp> map;
-	std::mutex mapMutex;
 public:
+	std::mutex mapMutex;
 	MapHWNDAltTabApp();
 	~MapHWNDAltTabApp();
 	bool containsHWND(HWND hwnd);

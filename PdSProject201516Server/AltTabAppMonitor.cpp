@@ -17,7 +17,8 @@ void AltTabAppMonitor()
 {
 	
 	while (active) {
-		//TO DO: WARNING -> WHEN THE CLIENT WANTS DATA BE AWARE OF EMPTY MAP!
+		//TO DO: WARNING -> WHEN THE CLIENT MUST ACCESS MAP IN CONSISTEN STATE!
+		std::unique_lock<std::mutex> ul(mapWndAltTabApp.mapMutex);
 		//clear the map
 		mapWndAltTabApp.clearMap();
 		//find opened Alt-Tab windows
@@ -30,6 +31,8 @@ void AltTabAppMonitor()
 			mapWndAltTabApp.findHWND(hwndWithFocus)->second.SetFocus(true);
 
 		DWORD error = GetLastError();
+		//map in consistent state
+		ul.unlock();
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(WINDOW_CHECK_INTERVAL));
 	}

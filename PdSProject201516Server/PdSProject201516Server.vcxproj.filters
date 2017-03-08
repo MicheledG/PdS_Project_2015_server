@@ -36,9 +36,6 @@
     <ClInclude Include="..\..\PdSProject201516ServerDLL\PdSProject201516ServerDLL\PdSProject201516ServerDLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="json.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AltTabAppMonitor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
