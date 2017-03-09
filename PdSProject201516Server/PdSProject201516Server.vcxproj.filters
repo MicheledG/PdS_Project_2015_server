@@ -36,10 +36,10 @@
     <ClInclude Include="..\..\PdSProject201516ServerDLL\PdSProject201516ServerDLL\PdSProject201516ServerDLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AltTabAppMonitor.h">
+    <ClInclude Include="MapHWNDAltTabApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MapHWNDAltTabApp.h">
+    <ClInclude Include="AltTabAppMonitorClass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -53,10 +53,10 @@
     <ClCompile Include="AltTabApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AltTabAppMonitor.cpp">
+    <ClCompile Include="MapHWNDAltTabApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MapHWNDAltTabApp.cpp">
+    <ClCompile Include="AltTabAppMonitorClass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
