@@ -1,11 +1,11 @@
 #pragma once
 
 #include "stdafx.h"
-#include "AltTabApp.h"
+#include "AltTabAppClass.h"
 
 class AltTabAppMonitorClass
 {
-	std::map<HWND, AltTabApp> map;
+	std::map<HWND, AltTabAppClass> map;
 	std::mutex mapMutex;
 	std::atomic<bool> active; //describe if the server application is still active
 	void monitor();
@@ -24,7 +24,7 @@ public:
 	~AltTabAppMonitorClass();
 	void start();
 	void stop(); //wait the end of the monitor thread
-	std::vector<AltTabApp> getAltTabAppVector();
+	std::vector<AltTabAppClass> getAltTabAppVector();
 	bool mapContainsHwnd(HWND hwnd);
 };
 

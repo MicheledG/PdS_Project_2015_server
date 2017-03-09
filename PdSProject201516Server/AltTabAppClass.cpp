@@ -1,10 +1,10 @@
 #include "stdafx.h"
-#include "AltTabApp.h"
+#include "AltTabAppClass.h"
 
 #define MAX_FILENAMEEXLEN 1024
 #define MAX_WNDTEXTLEN 1024
 
-AltTabApp::AltTabApp(HWND hWnd)
+AltTabAppClass::AltTabAppClass(HWND hWnd)
 {
 	if (!isAltTabApp(hWnd)) return; //let hWnd to NULL!
 
@@ -45,72 +45,72 @@ AltTabApp::AltTabApp(HWND hWnd)
 	return;
 }
 
-AltTabApp::~AltTabApp()
+AltTabAppClass::~AltTabAppClass()
 {
 }
 
-bool AltTabApp::AttachAppMsgQueue(AttachModeT mode)
+bool AltTabAppClass::AttachAppMsgQueue(AttachModeT mode)
 {
 	if(AttachThreadInput(dwThrdId, GetCurrentThreadId(), mode)) return true;
 	else return false;
 }
 
 
-void AltTabApp::SetFocus(bool hasFocus)
+void AltTabAppClass::SetFocus(bool hasFocus)
 {
 	focus = hasFocus;
 
 	return;
 }
 
-bool AltTabApp::GetFocus()
+bool AltTabAppClass::GetFocus()
 {
 	return focus;
 }
 
-HWND AltTabApp::GethWnd()
+HWND AltTabAppClass::GethWnd()
 {
 	return hWnd;
 }
 
-HANDLE AltTabApp::GethThrd()
+HANDLE AltTabAppClass::GethThrd()
 {
 	return hThrd;
 }
 
-DWORD AltTabApp::GetdwThrdId()
+DWORD AltTabAppClass::GetdwThrdId()
 {
 	return dwThrdId;
 }
 
-HANDLE AltTabApp::GethProc()
+HANDLE AltTabAppClass::GethProc()
 {
 	return hProc;
 }
 
-DWORD AltTabApp::GetdwProcId()
+DWORD AltTabAppClass::GetdwProcId()
 {
 	return dwProcId;
 }
 
-byte* AltTabApp::GetPngIcon()
+byte* AltTabAppClass::GetPngIcon()
 {	
 	return pPngIcon.get();
 }
 
-int AltTabApp::GetPngIconSize() {
+int AltTabAppClass::GetPngIconSize() {
 	if (pPngIcon.get() == nullptr)
 		return -1;
 	else
 		return iPngIconSize;
 }
 
-std::tstring AltTabApp::GettstrAppName()
+std::tstring AltTabAppClass::GettstrAppName()
 {
 	return tstrAppName;
 }
 
-std::tstring AltTabApp::GettstrWndText()
+std::tstring AltTabAppClass::GettstrWndText()
 {
 	//obtain window text
 	DWORD length = GetWindowTextLength(hWnd);
@@ -128,7 +128,7 @@ std::tstring AltTabApp::GettstrWndText()
 }
 
 //check if the application (window application) is "alt-tab"
-bool AltTabApp::isAltTabApp(HWND hWnd)
+bool AltTabAppClass::isAltTabApp(HWND hWnd)
 {		
 	TITLEBARINFO ti;
 	HWND hWndTry, hWndWalk = NULL;
@@ -174,7 +174,7 @@ bool AltTabApp::isAltTabApp(HWND hWnd)
 	return false;
 }
 
-HANDLE AltTabApp::GetThreadHandle(DWORD dwThrdId) {
+HANDLE AltTabAppClass::GetThreadHandle(DWORD dwThrdId) {
 
 	HANDLE hThrd = OpenThread(
 		THREAD_ALL_ACCESS,
@@ -187,7 +187,7 @@ HANDLE AltTabApp::GetThreadHandle(DWORD dwThrdId) {
 
 }
 
-HANDLE AltTabApp::GetProcHandle(DWORD dwProcId) {
+HANDLE AltTabAppClass::GetProcHandle(DWORD dwProcId) {
 
 	HANDLE hProc = OpenProcess(
 		PROCESS_ALL_ACCESS,
@@ -199,7 +199,7 @@ HANDLE AltTabApp::GetProcHandle(DWORD dwProcId) {
 	return hProc;
 }
 
-std::tstring AltTabApp::GetAppName(HANDLE hProc)
+std::tstring AltTabAppClass::GetAppName(HANDLE hProc)
 {
 	std::tstring tstrAppName;
 
@@ -269,7 +269,7 @@ std::tstring AltTabApp::GetAppName(HANDLE hProc)
 	return tstrAppName;
 }
 
-byte* AltTabApp::GetAppIconPng(HANDLE hProc, int *size) {
+byte* AltTabAppClass::GetAppIconPng(HANDLE hProc, int *size) {
 
 	IStream *pPngStream = nullptr;
 	if (CreateStream(&pPngStream) == -1)
@@ -298,7 +298,7 @@ byte* AltTabApp::GetAppIconPng(HANDLE hProc, int *size) {
 	return pPngByte;
 }
 
-int AltTabApp::CreateStream(LPSTREAM *pIstream) {
+int AltTabAppClass::CreateStream(LPSTREAM *pIstream) {
 
 	HRESULT result = CreateStreamOnHGlobal(
 		NULL,
@@ -312,7 +312,7 @@ int AltTabApp::CreateStream(LPSTREAM *pIstream) {
 		return 1;
 }
 
-int AltTabApp::GetAppHIcon(HANDLE hProc, HICON *appHIcon)
+int AltTabAppClass::GetAppHIcon(HANDLE hProc, HICON *appHIcon)
 {
 	//obtain name of the executable file
 	TCHAR fileNameEx[MAX_FILENAMEEXLEN];
@@ -333,7 +333,7 @@ int AltTabApp::GetAppHIcon(HANDLE hProc, HICON *appHIcon)
 	return 1;
 }
 
-int AltTabApp::GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
+int AltTabAppClass::GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
 	
 	/* startup Gdiplus to extract bitmap bytes from video memory */
 	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
@@ -362,7 +362,7 @@ int AltTabApp::GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
 }
 
 
-int AltTabApp::SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream) {
+int AltTabAppClass::SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStream) {
 
 	CLSID pngClsid;
 	if (GetEncoderClsid(L"image/png", &pngClsid) == -1)
@@ -375,7 +375,7 @@ int AltTabApp::SaveBitmapToPngStream(Gdiplus::Bitmap *pBitmap, IStream *pPngStre
 	return 1;
 }
 
-byte* AltTabApp::SavePngStreamToPngByte(IStream* pPngStream, int *size) {
+byte* AltTabAppClass::SavePngStreamToPngByte(IStream* pPngStream, int *size) {
 
 	STATSTG stat;
 	HRESULT result = pPngStream->Stat(&stat, STATFLAG_NONAME);
@@ -399,7 +399,7 @@ byte* AltTabApp::SavePngStreamToPngByte(IStream* pPngStream, int *size) {
 	return pPngByte;
 }
 
-int AltTabApp::GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
+int AltTabAppClass::GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 {
 	UINT  num = 0;          // number of image encoders
 	UINT  size = 0;         // size of the image encoder array in bytes

@@ -24,8 +24,7 @@ typedef enum AttachModeEnum
 	ATTACH = TRUE
 }	AttachModeT;
 
-class AltTabApp
-{
+class AltTabAppClass {
 	HWND hWnd = NULL;
 	HANDLE hThrd;
 	DWORD dwThrdId;
@@ -48,8 +47,8 @@ class AltTabApp
 	byte* SavePngStreamToPngByte(IStream* pPngStream, int *size);
 	int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 public:
-	AltTabApp(HWND hWnd);
-	~AltTabApp();
+	AltTabAppClass(HWND hWnd);
+	~AltTabAppClass();
 	bool AttachAppMsgQueue(AttachModeT mode);
 	void SetFocus(bool hasFocus);
 	bool GetFocus();
