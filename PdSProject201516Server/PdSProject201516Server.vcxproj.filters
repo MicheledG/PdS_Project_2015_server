@@ -39,6 +39,9 @@
     <ClInclude Include="AltTabAppClass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AltTabAppInfoTransmitterClass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -51,6 +54,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AltTabAppClass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AltTabAppInfoTransmitterClass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

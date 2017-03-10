@@ -152,6 +152,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\PdSProject201516ServerDLL\PdSProject201516ServerDLL\PdSProject201516ServerDLL.h" />
     <ClInclude Include="AltTabAppClass.h" />
+    <ClInclude Include="AltTabAppInfoTransmitterClass.h" />
     <ClInclude Include="AltTabAppMonitorClass.h" />
     <ClInclude Include="PdSProject201516Server.h" />
     <ClInclude Include="Resource.h" />
@@ -160,6 +161,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AltTabAppClass.cpp" />
+    <ClCompile Include="AltTabAppInfoTransmitterClass.cpp" />
     <ClCompile Include="AltTabAppMonitorClass.cpp" />
     <ClCompile Include="PdSProject201516Server.cpp" />
     <ClCompile Include="stdafx.cpp">

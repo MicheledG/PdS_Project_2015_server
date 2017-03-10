@@ -13,13 +13,6 @@ class AltTabAppMonitorClass
 	const static int CHECK_WINDOW_INTERVAL = 1000; //ms
 	std::thread monitorThread;
 public:
-	enum event_type {
-		APP_CREATION_EVENT,
-		APP_DESTRUCTION_EVENT,
-		FOCUS_CHANGE_EVENT,
-		NO_EVENT
-	};
-
 	AltTabAppMonitorClass();
 	~AltTabAppMonitorClass();
 	void start();
