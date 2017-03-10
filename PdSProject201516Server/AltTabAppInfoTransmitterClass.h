@@ -1,18 +1,21 @@
 #pragma once
 #include "AltTabAppMonitorClass.h"
 #include <cpprest\http_listener.h>
+#include <cpprest\json.h>
 
-using namespace web::http::experimental::listener;
+using namespace web;
 using namespace web::http;
+using namespace web::http::experimental::listener;
+
 
 class AltTabAppInfoTransmitterClass
 {
-	http_listener listener;
 	AltTabAppMonitorClass* monitor;
-	//std::thread communicationThread;
-	//std::atomic<bool> active;
-	void test(http_request request);
-	const static int DEFAULT_PORT = 27015;
+	http_listener listener;
+	static const std::tstring URL;
+	void handle_get(http_request request);
+	json::value fromAltTabAppObjToJsonObj(AltTabAppClass altTabAppObj);
+	std::tstring fromPNGToBase64(AltTabAppClass altTabAppObj);
 public:
 	AltTabAppInfoTransmitterClass(AltTabAppMonitorClass* monitor);
 	~AltTabAppInfoTransmitterClass();
