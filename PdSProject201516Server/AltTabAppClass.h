@@ -57,7 +57,8 @@ public:
 	DWORD GetdwThrdId();
 	HANDLE GethProc();
 	DWORD GetdwProcId();
-	byte* GetPngIcon();
+	//byte* GetPngIcon();
+	std::shared_ptr<byte> GetPngIcon();
 	int GetPngIconSize();
 	std::tstring GettstrAppName();
 	std::tstring GettstrWndText();

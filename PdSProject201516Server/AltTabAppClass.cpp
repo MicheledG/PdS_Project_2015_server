@@ -94,9 +94,14 @@ DWORD AltTabAppClass::GetdwProcId()
 	return dwProcId;
 }
 
-byte* AltTabAppClass::GetPngIcon()
-{	
-	return pPngIcon.get();
+//byte* AltTabAppClass::GetPngIcon()
+//{	
+//	return pPngIcon.get();
+//}
+
+std::shared_ptr<byte> AltTabAppClass::GetPngIcon()
+{
+	return this->pPngIcon;
 }
 
 int AltTabAppClass::GetPngIconSize() {
@@ -407,6 +412,9 @@ byte* AltTabAppClass::SavePngStreamToPngByte(IStream* pPngStream, int *size) {
 		return nullptr;
 
 	unsigned long int readByte;
+	LARGE_INTEGER zero;
+	zero.QuadPart = 0;
+	pPngStream->Seek(zero, STREAM_SEEK_SET, NULL);
 	result = pPngStream->Read(pPngByte, *size, &readByte);
 	if (result != S_OK) {
 		delete[] pPngByte;

@@ -51,7 +51,8 @@ std::tstring AltTabAppInfoTransmitterClass::fromPNGToBase64(AltTabAppClass altTa
 	try {
 
 		int iPngIconSize = altTabAppObj.GetPngIconSize();
-		std::shared_ptr<byte> pPngIcon = std::shared_ptr<byte>(altTabAppObj.GetPngIcon(), [](byte* ptr) { delete[] ptr; return; });
+		//std::shared_ptr<byte> pPngIcon = std::shared_ptr<byte>(altTabAppObj.GetPngIcon(), [](byte* ptr) { delete[] ptr; return; });
+		std::shared_ptr<byte> pPngIcon = altTabAppObj.GetPngIcon();
 		if (iPngIconSize == -1 || pPngIcon.get() == nullptr) {
 			errorString.assign(L"error retrieving app icon");
 			throw std::exception::exception();
