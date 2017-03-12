@@ -4,7 +4,6 @@
 #define MAX_FILENAMEEXLEN 1024
 #define MAX_WNDTEXTLEN 1024
 
-
 //IF SOMETHING GOES WRONG DURING CONSTRUCTION RETURNS AltTabAppClass with hWnd == NULL
 AltTabAppClass::AltTabAppClass(HWND hWnd)
 {
@@ -272,6 +271,7 @@ std::tstring AltTabAppClass::GetAppName(HANDLE hProc)
 }
 
 byte* AltTabAppClass::GetAppIconPng(HANDLE hProc, int *size) {
+	
 
 	IStream *pPngStream = nullptr;
 	if (CreateStream(&pPngStream) == -1)
@@ -281,13 +281,20 @@ byte* AltTabAppClass::GetAppIconPng(HANDLE hProc, int *size) {
 
 	if (GetAppHIcon(hProc, &appHIcon) == -1) {
 		pPngStream->Release();
+		//always to do
+		DestroyIcon(appHIcon);
 		return nullptr;
 	}
 
 	if (GetAppBitmapStream(appHIcon, pPngStream) == -1) {
 		pPngStream->Release();
+		//always to do
+		DestroyIcon(appHIcon);
 		return nullptr;
 	}
+
+	//always to do
+	DestroyIcon(appHIcon);
 
 	byte *pPngByte = SavePngStreamToPngByte(pPngStream, size);
 	if (pPngByte == nullptr) {
@@ -323,7 +330,7 @@ int AltTabAppClass::GetAppHIcon(HANDLE hProc, HICON *appHIcon)
 		NULL,
 		fileNameEx,
 		MAX_FILENAMEEXLEN);
-
+	
 	*appHIcon = ExtractIcon(
 		NULL,
 		fileNameEx,
@@ -333,6 +340,11 @@ int AltTabAppClass::GetAppHIcon(HANDLE hProc, HICON *appHIcon)
 		return -1;
 
 	return 1;
+
+
+
+
+
 }
 
 int AltTabAppClass::GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
@@ -348,7 +360,8 @@ int AltTabAppClass::GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
 	}
 		
 	/* extract the bitmap */
-	Gdiplus::Bitmap *pBitmap = new Gdiplus::Bitmap(appHIcon);
+	//Gdiplus::Bitmap *pBitmap = new Gdiplus::Bitmap(appHIcon);
+	Gdiplus::Bitmap *pBitmap = Gdiplus::Bitmap::FromHICON(appHIcon);
 
 	if (SaveBitmapToPngStream(pBitmap, pPngStream) == -1) {
 		delete pBitmap;
@@ -384,6 +397,9 @@ byte* AltTabAppClass::SavePngStreamToPngByte(IStream* pPngStream, int *size) {
 	if (result != S_OK)
 		return nullptr;
 
+	ULONGLONG big =  stat.cbSize.QuadPart;
+	DWORD small1 = stat.cbSize.LowPart;
+	DWORD small2 = stat.cbSize.HighPart;
 
 	*size = stat.cbSize.LowPart;
 	byte* pPngByte = new byte[*size];
