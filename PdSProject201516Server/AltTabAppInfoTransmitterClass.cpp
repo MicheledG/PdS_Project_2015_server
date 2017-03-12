@@ -2,7 +2,7 @@
 #include "AltTabAppInfoTransmitterClass.h"
 #include "AltTabAppClass.h"
 
-const std::tstring AltTabAppInfoTransmitterClass::URL = std::tstring(L"http://*:60000/pds_server/");
+const std::tstring AltTabAppInfoTransmitterClass::URL = std::tstring(L"http://*:60000/pds_server/app_list");
 
 void AltTabAppInfoTransmitterClass::handle_get(http_request request)
 {
@@ -38,36 +38,32 @@ json::value AltTabAppInfoTransmitterClass::fromAltTabAppObjToJsonObj(AltTabAppCl
 	jApp[U("app_name")] = json::value::string(altTabAppObj.GettstrAppName());
 	jApp[U("window_text")] = json::value::string(altTabAppObj.GettstrWndText());
 	jApp[U("focus")] = json::value::boolean(altTabAppObj.GetFocus());
-	//to do: bug right here! when http response thread has finished we have problem on png pointer -> alttabappclass
-	jApp[U("icon_64")] = json::value::string(this->fromPNGToBase64(altTabAppObj));
-	
+	jApp[U("icon_64")] = json::value::string(this->fromPNGToBase64(altTabAppObj.GetPngIcon(), altTabAppObj.GetPngIconSize()));
+
 	return jApp;
 }
 
-std::tstring AltTabAppInfoTransmitterClass::fromPNGToBase64(AltTabAppClass altTabAppObj)
+std::tstring AltTabAppInfoTransmitterClass::fromPNGToBase64(std::shared_ptr<byte> pPNGByte, int iPNGSize)
 {
 	std::tstring errorString;
 
 	try {
 
-		int iPngIconSize = altTabAppObj.GetPngIconSize();
-		//std::shared_ptr<byte> pPngIcon = std::shared_ptr<byte>(altTabAppObj.GetPngIcon(), [](byte* ptr) { delete[] ptr; return; });
-		std::shared_ptr<byte> pPngIcon = altTabAppObj.GetPngIcon();
-		if (iPngIconSize == -1 || pPngIcon.get() == nullptr) {
+		if (iPNGSize == -1 || pPNGByte.get() == nullptr) {
 			errorString.assign(L"error retrieving app icon");
 			throw std::exception::exception();
 		}
 
 		//convert byte format to base64
 		DWORD iBase64IconSize;
-		BOOL success = CryptBinaryToString(pPngIcon.get(), iPngIconSize, CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, NULL, &iBase64IconSize);
+		BOOL success = CryptBinaryToString(pPNGByte.get(), iPNGSize, CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, NULL, &iBase64IconSize);
 		if (!success) {
 			errorString.assign(L"error retrieving info to convert into base64");
 			throw std::exception::exception();
 		}
 
 		std::shared_ptr<TCHAR> pBase64Icon = std::shared_ptr<TCHAR>(new TCHAR[iBase64IconSize], [](TCHAR* ptr) { delete[] ptr; return; });
-		success = CryptBinaryToString(pPngIcon.get(), iPngIconSize, CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, pBase64Icon.get(), &iBase64IconSize);
+		success = CryptBinaryToString(pPNGByte.get(), iPNGSize, CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, pBase64Icon.get(), &iBase64IconSize);
 		if (!success) {
 			errorString.assign(L"error retrieving base64 translation of the bitmap");
 			throw std::exception::exception();

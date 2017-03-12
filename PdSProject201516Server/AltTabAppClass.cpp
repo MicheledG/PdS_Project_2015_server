@@ -94,11 +94,6 @@ DWORD AltTabAppClass::GetdwProcId()
 	return dwProcId;
 }
 
-//byte* AltTabAppClass::GetPngIcon()
-//{	
-//	return pPngIcon.get();
-//}
-
 std::shared_ptr<byte> AltTabAppClass::GetPngIcon()
 {
 	return this->pPngIcon;
@@ -136,7 +131,7 @@ std::tstring AltTabAppClass::GettstrWndText()
 //check if the application (window application) is "alt-tab"
 bool AltTabAppClass::isAltTabApp(HWND hWnd)
 {		
-	TITLEBARINFO ti;
+	
 	HWND hWndTry, hWndWalk = NULL;
 
 	if (!IsWindowVisible(hWnd))
@@ -167,6 +162,7 @@ bool AltTabAppClass::isAltTabApp(HWND hWnd)
 		return true;
 
 	//// the following removes some task tray programs and "Program Manager"
+	//TITLEBARINFO ti;
 	//ti.cbSize = sizeof(ti);
 	//GetTitleBarInfo(hWnd, &ti);
 	//if (ti.rgstate[0] & STATE_SYSTEM_INVISIBLE)

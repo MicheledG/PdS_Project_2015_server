@@ -15,7 +15,7 @@ class AltTabAppInfoTransmitterClass
 	static const std::tstring URL;
 	void handle_get(http_request request);
 	json::value fromAltTabAppObjToJsonObj(AltTabAppClass altTabAppObj);
-	std::tstring fromPNGToBase64(AltTabAppClass altTabAppObj);
+	std::tstring fromPNGToBase64(std::shared_ptr<byte> pPNGByte, int iPNGSize);
 public:
 	AltTabAppInfoTransmitterClass(AltTabAppMonitorClass* monitor);
 	~AltTabAppInfoTransmitterClass();
