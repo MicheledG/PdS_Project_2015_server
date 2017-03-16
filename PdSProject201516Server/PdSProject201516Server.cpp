@@ -5,6 +5,7 @@
 #include "PdSProject201516Server.h"
 #include "AltTabAppMonitorClass.h"
 #include "AltTabAppInfoTransmitterClass.h"
+#include "ListeningSocketManagerClass.h"
 
 #define MAX_LOADSTRING 100
 #define WM_USER_SHELLICON WM_USER + 1
@@ -18,6 +19,7 @@ HMENU hPopMenu;
 AltTabAppMonitorClass altTabAppMonitor;
 //TO DO: improve pointer and create interface to be implemented from altTabAppMonitor	
 AltTabAppInfoTransmitterClass altTabAppInfoTransmitter(&altTabAppMonitor);
+ListeningSocketManagerClass listeningSocketManager(&altTabAppMonitor);
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -35,7 +37,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	// TODO: Place code here.
 	altTabAppMonitor.start();
-	altTabAppInfoTransmitter.start();
+	//altTabAppInfoTransmitter.start();
+	listeningSocketManager.start();
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -188,7 +191,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_DESTROY:
 		/* close all the resources here! */
-		altTabAppInfoTransmitter.stop();
+		listeningSocketManager.stop();
+		//altTabAppInfoTransmitter.stop();
 		altTabAppMonitor.stop();
 		PostQuitMessage(0);
         break;
