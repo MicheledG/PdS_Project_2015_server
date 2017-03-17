@@ -156,7 +156,7 @@
     <ClInclude Include="AltTabAppClass.h" />
     <ClInclude Include="AltTabAppInfoTransmitterClass.h" />
     <ClInclude Include="AltTabAppMonitorClass.h" />
-    <ClInclude Include="ListeningSocketManagerClass.h" />
+    <ClInclude Include="AltTabAppInfoSocketTransmitterClass.h" />
     <ClInclude Include="PdSProject201516Server.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -166,7 +166,7 @@
     <ClCompile Include="AltTabAppClass.cpp" />
     <ClCompile Include="AltTabAppInfoTransmitterClass.cpp" />
     <ClCompile Include="AltTabAppMonitorClass.cpp" />
-    <ClCompile Include="ListeningSocketManagerClass.cpp" />
+    <ClCompile Include="AltTabAppInfoSocketTransmitterClass.cpp" />
     <ClCompile Include="PdSProject201516Server.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

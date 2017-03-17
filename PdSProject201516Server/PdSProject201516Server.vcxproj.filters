@@ -42,7 +42,7 @@
     <ClInclude Include="AltTabAppInfoTransmitterClass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ListeningSocketManagerClass.h">
+    <ClInclude Include="AltTabAppInfoSocketTransmitterClass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,7 +62,7 @@
     <ClCompile Include="AltTabAppInfoTransmitterClass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ListeningSocketManagerClass.cpp">
+    <ClCompile Include="AltTabAppInfoSocketTransmitterClass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
