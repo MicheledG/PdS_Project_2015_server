@@ -12,7 +12,7 @@ class AltTabAppInfoSocketTransmitterClass
 	std::thread listeningSocketThread;
 	AltTabAppMonitorClass* monitor;
 	std::vector<std::shared_ptr<std::thread>> threadVector;
-	void serveClient(SOCKET clientSocket, AltTabAppMonitorClass* monitor, std::atomic<bool>* active);
+	void sendMsgToClient(SOCKET clientSocket);
 	json::value fromAltTabAppObjToJsonObj(AltTabAppClass altTabAppObj);
 	std::tstring fromPNGToBase64(std::shared_ptr<byte> pPNGByte, int iPNGSize);
 public:
@@ -20,5 +20,6 @@ public:
 	~AltTabAppInfoSocketTransmitterClass();
 	void start();
 	void stop();
+	
 };
 

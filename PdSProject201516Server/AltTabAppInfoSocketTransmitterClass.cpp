@@ -86,7 +86,7 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 	}
 
 	// Accept a client socket
-	while (this->active) {
+	while (this->active.load()) {
 		ClientSocket = accept(ListenSocket, NULL, NULL);
 		if (ClientSocket == INVALID_SOCKET) {
 			printf("accept failed with error: %d\n", WSAGetLastError());
@@ -94,9 +94,8 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 			WSACleanup();
 			return;
 		}
-		closesocket(ClientSocket);
-		std::shared_ptr<int> testIntPtr = std::shared_ptr<int>(new int[10], [](int* ptr) { delete[] ptr; }); //avoid leak of memory and ensure joining all the child thread
-		//pay attention to the destruction of the pointer! -> they will be class with associated thread!
+		std::thread sendMsgToClientThread = std::thread(&AltTabAppInfoSocketTransmitterClass::sendMsgToClient, this, ClientSocket);
+		sendMsgToClientThread.join();
 	}
 
 	// No longer need server socket
@@ -107,43 +106,68 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 }
 
 
-void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket, AltTabAppMonitorClass * monitor, std::atomic<bool>* active)
+void AltTabAppInfoSocketTransmitterClass::sendMsgToClient(SOCKET clientSocket)
 {
 
-	while (active->load()) {
+	while (this->active.load()) {
 		/* obtain the list and data of all the opened windows */
 		std::vector<AltTabAppClass> altTabAppVector = this->monitor->getAltTabAppVector();
+		
 		/* jsonify everything */
-		web::json::value jBody = web::json::value::object();
+		web::json::value jMsg = web::json::value::object();
 		web::json::value jAppList = web::json::value::array();
 		int iAppNumber = 0;
 		for each (AltTabAppClass app in altTabAppVector)
 		{
 			jAppList[iAppNumber++] = this->fromAltTabAppObjToJsonObj(app);
 		}
-		jBody[U("app_list")] = jAppList;
-		jBody[U("app_number")] = web::json::value::number(iAppNumber);
-		/* send the message to the client */
-		/* compute length of the message */
-		//stringfy json
-		int jsonLen = 
-		int msgLen = sizeof(int)
+		jMsg[U("app_list")] = jAppList;
+		jMsg[U("app_number")] = web::json::value::number(iAppNumber);
+		
+		/* stringfy json */
+		std::string msgString = utility::conversions::to_utf8string(jMsg.serialize());
+		int32_t msgLen = msgString.length();
+		
 		/* put the message into the char buffer */
-		std::shared_ptr<char> msgBuf = std::shared_ptr<char>(new char[msgLen], [](char* ptr) {delete[] ptr; })
-		/* send the char buffer */
-		/* check everything is ok */
-		/* sleep for a while */
-		int iSendResult = send(clientSocket, msgBuf, iResult, 0);
-		if (iSendResult == SOCKET_ERROR) {
+		std::shared_ptr<char> msgBuf = std::shared_ptr<char>(new char[msgLen+1], [](char* ptr) {delete[] ptr; });
+		strcpy_s(msgBuf.get(), msgLen + 1, msgString.c_str());
+		
+		/* send the msgLen => 4B = 32bit */
+		int iResult = send(clientSocket, (char*) &msgLen, sizeof(int32_t), 0);
+		if (iResult == SOCKET_ERROR) {
 			printf("send failed with error: %d\n", WSAGetLastError());
-			closesocket(ClientSocket);
+			closesocket(clientSocket);
 			WSACleanup();
-			return 1;
+			return;
 		}
-		printf("Bytes sent: %d\n", iSendResult);
+		
+		/* send the char buffer */
+		iResult = send(clientSocket, msgBuf.get(), msgLen, 0);
+		if (iResult == SOCKET_ERROR) {
+			printf("send failed with error: %d\n", WSAGetLastError());
+			closesocket(clientSocket);
+			WSACleanup();
+			return;
+		}
 
+		/* wait client response */
+		int32_t clientResponse = 0;
+		iResult = recv(clientSocket, (char*) &clientResponse, sizeof(int32_t), 0);
+		if (iResult != 4 || clientResponse != msgLen ) {
+			printf("receive not complete");
+			closesocket(clientSocket);
+			WSACleanup();
+			return;
+		}
+
+		/* sleep for a while */
+		printf("Bytes sent: %d\n", iResult);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 
+	//active == false;
+	closesocket(clientSocket);
+	return;
 
 }
 
