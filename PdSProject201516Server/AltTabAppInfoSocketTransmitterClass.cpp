@@ -94,8 +94,8 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 			WSACleanup();
 			return;
 		}
-		std::thread sendMsgToClientThread = std::thread(&AltTabAppInfoSocketTransmitterClass::sendMsgToClient, this, ClientSocket);
-		sendMsgToClientThread.join();
+		std::thread serveClientThread = std::thread(&AltTabAppInfoSocketTransmitterClass::serveClient, this, ClientSocket);
+		serveClientThread.join();
 	}
 
 	// No longer need server socket
@@ -105,64 +105,54 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 	return;
 }
 
-
-void AltTabAppInfoSocketTransmitterClass::sendMsgToClient(SOCKET clientSocket)
+void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 {
+	//get actual list of opened alt tab app
+	std::unique_lock<std::mutex> mapLock(this->monitor->mapMutex);
+	std::vector<AltTabAppClass> altTabAppVector = this->monitor->getAltTabAppVector();
+	mapLock.unlock();
+	
+	//create initial message to send to the client
+	web::json::value jMsg = createJsonAppListMessage(altTabAppVector);
+	std::string msgString = utility::conversions::to_utf8string(jMsg.serialize());
+
+	//send message to the client
+	bool success = sendMsgToClient(clientSocket, msgString);
+	if (!success) {
+		closesocket(clientSocket);
+		return;
+	}
+	
+	/* sleep for a while */
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 	while (this->active.load()) {
-		/* obtain the list and data of all the opened windows */
-		std::vector<AltTabAppClass> altTabAppVector = this->monitor->getAltTabAppVector();
 		
-		/* jsonify everything */
-		web::json::value jMsg = web::json::value::object();
-		web::json::value jAppList = web::json::value::array();
-		int iAppNumber = 0;
-		for each (AltTabAppClass app in altTabAppVector)
-		{
-			jAppList[iAppNumber++] = this->fromAltTabAppObjToJsonObj(app);
-		}
-		jMsg[U("app_list")] = jAppList;
-		jMsg[U("app_number")] = web::json::value::number(iAppNumber);
-		
-		/* stringfy json */
-		std::string msgString = utility::conversions::to_utf8string(jMsg.serialize());
-		int32_t msgLen = msgString.length();
-		
-		/* put the message into the char buffer */
-		std::shared_ptr<char> msgBuf = std::shared_ptr<char>(new char[msgLen+1], [](char* ptr) {delete[] ptr; });
-		strcpy_s(msgBuf.get(), msgLen + 1, msgString.c_str());
-		
-		/* send the msgLen => 4B = 32bit */
-		int iResult = send(clientSocket, (char*) &msgLen, sizeof(int32_t), 0);
-		if (iResult == SOCKET_ERROR) {
-			printf("send failed with error: %d\n", WSAGetLastError());
-			closesocket(clientSocket);
-			WSACleanup();
-			return;
+		std::unique_lock<std::mutex> queueLock(this->monitor->eventQueueMutex);
+
+		//WARNING: STOP FIRST THE TRANSMITTER AND THEN THE MONITOR
+		while (true) {
+			if (!this->monitor->eventQueue.empty())
+				//event in the queue
+				break;
+			this->monitor->newEventInQueue.wait(queueLock);
 		}
 		
-		/* send the char buffer */
-		iResult = send(clientSocket, msgBuf.get(), msgLen, 0);
-		if (iResult == SOCKET_ERROR) {
-			printf("send failed with error: %d\n", WSAGetLastError());
+		std::pair<notification_event_type, HWND> eventNotification = this->monitor->eventQueue.front();
+		this->monitor->eventQueue.pop_front();
+		queueLock.unlock();
+
+		//create the right message depending on the event
+		jMsg = createJsonNotificationMessage(eventNotification);
+				
+		//send the message created
+		msgString = utility::conversions::to_utf8string(jMsg.serialize());
+		bool success = sendMsgToClient(clientSocket, msgString);
+		if (!success) {
 			closesocket(clientSocket);
-			WSACleanup();
 			return;
 		}
 
-		/* wait client response */
-		int32_t clientResponse = 0;
-		iResult = recv(clientSocket, (char*) &clientResponse, sizeof(int32_t), 0);
-		if (iResult != 4 || clientResponse != msgLen ) {
-			printf("receive not complete");
-			closesocket(clientSocket);
-			WSACleanup();
-			return;
-		}
-
-		/* sleep for a while */
-		printf("Bytes sent: %d\n", iResult);
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 
 	//active == false;
@@ -171,12 +161,84 @@ void AltTabAppInfoSocketTransmitterClass::sendMsgToClient(SOCKET clientSocket)
 
 }
 
-json::value AltTabAppInfoSocketTransmitterClass::fromAltTabAppObjToJsonObj(AltTabAppClass altTabAppObj)
+bool AltTabAppInfoSocketTransmitterClass::sendMsgToClient(SOCKET clientSocket, std::string msg) {
+
+	//int32_t msgLen = msg.length();
+
+	///* put the message into the char buffer */
+	//std::shared_ptr<char> msgBuf = std::shared_ptr<char>(new char[msgLen + 1], [](char* ptr) {delete[] ptr; });
+	//strcpy_s(msgBuf.get(), msgLen + 1, msg.c_str());
+
+	///* send the msgLen => 4B = 32bit */
+	//int iResult = send(clientSocket, (char*)&msgLen, sizeof(int32_t), 0);
+	//if (iResult == SOCKET_ERROR) {
+	//	printf("send failed with error: %d\n", WSAGetLastError());
+	//	closesocket(clientSocket);
+	//	WSACleanup();
+	//	return false;
+	//}
+
+	///* send the char buffer */
+	//iResult = send(clientSocket, msgBuf.get(), msgLen, 0);
+	//if (iResult == SOCKET_ERROR) {
+	//	printf("send failed with error: %d\n", WSAGetLastError());
+	//	closesocket(clientSocket);
+	//	WSACleanup();
+	//	return false;
+	//}
+
+	///* wait client response */
+	//int32_t clientResponse = 0;
+	//iResult = recv(clientSocket, (char*)&clientResponse, sizeof(int32_t), 0);
+	//if (iResult != 4 || clientResponse != msgLen) {
+	//	printf("receive not complete");
+	//	closesocket(clientSocket);
+	//	WSACleanup();
+	//	return false;
+	//}
+
+	return true;
+
+}
+
+json::value AltTabAppInfoSocketTransmitterClass::createJsonAppListMessage(std::vector<AltTabAppClass> altTabAppVector) {
+
+	web::json::value jMsg = web::json::value::object();
+	web::json::value jAppList = web::json::value::array();
+	int iAppNumber = 0;
+	for each (AltTabAppClass app in altTabAppVector)
+	{
+		jAppList[iAppNumber++] = this->fromAltTabAppObjToJsonObj(app);
+	}
+	jMsg[U("app_list")] = jAppList;
+	jMsg[U("app_number")] = web::json::value::number(iAppNumber);
+
+	return jMsg;
+}
+
+json::value AltTabAppInfoSocketTransmitterClass::createJsonNotificationMessage(std::pair<notification_event_type, HWND> eventNotification)
+{
+	web::json::value jMsg = web::json::value::object();
+	web::json::value jAppList = web::json::value::array();
+	AltTabAppClass notificationApp(eventNotification.second, true);
+	jAppList[0] = this->fromAltTabAppObjToJsonObj(notificationApp, true);
+	jMsg[U("app_list")] = jAppList;
+	jMsg[U("app_number")] = web::json::value::number(1);
+	std::tstring eventNotificationTString = this->fromNotificationEventEnumToTString(eventNotification.first);
+	jMsg[U("notification_event")] = web::json::value::string(eventNotificationTString);
+
+	return jMsg;
+}
+
+json::value AltTabAppInfoSocketTransmitterClass::fromAltTabAppObjToJsonObj(AltTabAppClass altTabAppObj, bool empty)
 {
 
 	web::json::value jApp = web::json::value::object();
 
 	jApp[U("app_id")] = json::value::number((uint64_t)altTabAppObj.GethWnd()); //use hwnd as app id both on client both on server
+	if (empty)
+		return jApp;
+
 	jApp[U("app_name")] = json::value::string(altTabAppObj.GettstrAppName());
 	jApp[U("window_text")] = json::value::string(altTabAppObj.GettstrWndText());
 	jApp[U("focus")] = json::value::boolean(altTabAppObj.GetFocus());
@@ -218,4 +280,26 @@ std::tstring AltTabAppInfoSocketTransmitterClass::fromPNGToBase64(std::shared_pt
 	catch (std::exception e) {
 		return errorString;
 	}
+}
+
+std::tstring AltTabAppInfoSocketTransmitterClass::fromNotificationEventEnumToTString(notification_event_type notificationEvent)
+{
+	std::tstring notificationEventString;
+	switch (notificationEvent)
+	{
+	case notification_event_type::APP_CREATE:
+		notificationEventString = std::tstring(L"APP_CREATE");
+		break;
+	case notification_event_type::APP_DESTROY:
+		notificationEventString = std::tstring(L"APP_DESTROY");
+		break;
+	case notification_event_type::APP_FOCUS:
+		notificationEventString = std::tstring(L"APP_FOCUS");
+		break;
+	default:
+		notificationEventString = std::tstring(L"unknown notification type");
+		break;
+	}
+	
+	return notificationEventString;
 }

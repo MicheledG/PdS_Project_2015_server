@@ -47,7 +47,8 @@ class AltTabAppClass {
 	byte* SavePngStreamToPngByte(IStream* pPngStream, int *size);
 	int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 public:
-	AltTabAppClass(HWND hWnd);
+	AltTabAppClass();
+	AltTabAppClass(HWND hWnd, bool empty = false);
 	~AltTabAppClass();
 	bool AttachAppMsgQueue(AttachModeT mode);
 	void SetFocus(bool hasFocus);

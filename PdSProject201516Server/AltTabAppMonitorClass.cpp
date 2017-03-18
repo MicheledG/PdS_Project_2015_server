@@ -23,26 +23,67 @@ void AltTabAppMonitorClass::stop()
 
 void AltTabAppMonitorClass::monitor()
 {
-	
-	while (active) {
-		//TO DO: WARNING -> WHEN THE CLIENT MUST ACCESS MAP IN CONSISTEN STATE!
-		std::unique_lock<std::mutex> ul(this->mapMutex);
-		//clear the map
-		this->map.clear();
-		//find opened Alt-Tab windows
-		BOOL result = EnumWindows(AltTabAppMonitorClass::HandleWinDetected, reinterpret_cast<LPARAM>(this));
-		if (result == FALSE) return;
+	//create initial map
+	std::unique_lock<std::mutex> mapLock(this->mapMutex);
+	this->getActualOpenedApp(&this->map, &this->focusAppId);
+	//map in consistent state
+	mapLock.unlock();
 
-		//initialize first focus
-		HWND hwndWithFocus = GetForegroundWindow();
-		bool mapContainsHwnd = !(this->map.find(hwndWithFocus) == this->map.end());
-		if (hwndWithFocus != NULL && mapContainsHwnd)
-			this->map.find(hwndWithFocus)->second.SetFocus(true);
+	while (active.load()) {
+		//create temporary map with the actual window opened
+		std::map<HWND, AltTabAppClass> tmpMap;
+		HWND tmpFocusAppId;
+		this->getActualOpenedApp(&tmpMap, &tmpFocusAppId);
+		
+		//compare temporary and monitor map and update monitor map
+		mapLock.lock();
+		//remove closed app
+		for each (std::pair<HWND, AltTabAppClass> pair in this->map)
+		{
+			bool tmpMapContains = !(tmpMap.find(pair.first) == tmpMap.end());
+			if (!tmpMapContains) {
+				//the app considere is no more opened because it is not contained into the tmpMap
+				this->map.erase(pair.first);
+				//ADD EVENT TO THE QUEUE EVENT
+				std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_DESTROY, pair.first);
+				std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
+				this->eventQueue.push_back(eventNotification);
+				this->newEventInQueue.notify_one();
+			}
+			else {
+				//the app is still opened so check the next one
+				tmpMap.erase(pair.first);
+			}
+		}
 
-		DWORD error = GetLastError();
-		//map in consistent state
-		ul.unlock();
+		//insert new opened app
+		for each (std::pair<HWND, AltTabAppClass> tmpPair in tmpMap)
+		{
+			//the apps still contained in the temporary map are all new
+			this->map.insert(tmpPair);
+			//ADD EVENT TO THE QUEUE EVENT
+			std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_CREATE, tmpPair.first);
+			std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
+			this->eventQueue.push_back(eventNotification);
+			this->newEventInQueue.notify_one();
+		}
 
+		//check focus change
+		HWND oldFocusAppId = this->focusAppId;
+		if (oldFocusAppId != tmpFocusAppId) {
+			bool mapContains = !(this->map.find(oldFocusAppId) == this->map.end());
+			if(mapContains)
+				this->map[oldFocusAppId].SetFocus(false);
+			this->map[tmpFocusAppId].SetFocus(true);
+			this->focusAppId = tmpFocusAppId;
+			//ADD EVENT TO THE QUEUE EVENT
+			std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_FOCUS, tmpFocusAppId);
+			std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
+			this->eventQueue.push_back(eventNotification);
+			this->newEventInQueue.notify_one();
+		}
+
+		mapLock.unlock();
 		std::this_thread::sleep_for(std::chrono::milliseconds(AltTabAppMonitorClass::CHECK_WINDOW_INTERVAL));
 	}
 
@@ -51,14 +92,32 @@ void AltTabAppMonitorClass::monitor()
 	return;
 }
 
+/* store into a given map the actual opened alt tab app and into a HWND the app id of the one with the focus */
+ void AltTabAppMonitorClass::getActualOpenedApp(std::map<HWND, AltTabAppClass>* appMap, HWND* focusAppId)
+{
+	//insert opened Alt-Tab windows into the map
+	BOOL result = EnumWindows(AltTabAppMonitorClass::HandleWinDetected, reinterpret_cast<LPARAM>(appMap));
+	if (result == FALSE) return;
+	//set focusAppId
+	HWND tmpFocusAppId = GetForegroundWindow();
+	bool mapContainsHwnd = !(appMap->find(tmpFocusAppId) == appMap->end());
+	if (tmpFocusAppId != NULL && mapContainsHwnd) {
+		appMap->find(tmpFocusAppId)->second.SetFocus(true);
+		*focusAppId = tmpFocusAppId;
+	}
+	DWORD error = GetLastError();
+	
+	return;
+}
+
 /* manage the window returned by EnumWindows -> insert in map or not */
 //IT IS ALWAYS CALLED WITH THE LOCK ACQUIRED BY THE THREAD WHICH CALLS THIS CALLBACK -> not acquire again!
 BOOL CALLBACK AltTabAppMonitorClass::HandleWinDetected(HWND hwnd, LPARAM ptr)
 {
-	AltTabAppMonitorClass* myThis = reinterpret_cast<AltTabAppMonitorClass*>(ptr);
-	
+	std::map<HWND, AltTabAppClass>* mapPtr = reinterpret_cast<std::map<HWND, AltTabAppClass>*>(ptr);
+
 	/* check if the app is already into the map*/
-	bool mapContainsHwnd = !(myThis->map.find(hwnd) == myThis->map.end());
+	bool mapContainsHwnd = !(mapPtr->find(hwnd) == mapPtr->end());
 	if (mapContainsHwnd)
 		/*the app is already into the map*/
 		return TRUE;
@@ -71,15 +130,14 @@ BOOL CALLBACK AltTabAppMonitorClass::HandleWinDetected(HWND hwnd, LPARAM ptr)
 		return TRUE;
 
 	/* insert into the map */
-	myThis->map.insert(std::pair<HWND, AltTabAppClass>(hwnd, newApp));
+	mapPtr->insert(std::pair<HWND, AltTabAppClass>(hwnd, newApp));
 	return TRUE;
 }
 
+//ATTENTION: NOT THREAD SAFE!
 std::vector<AltTabAppClass> AltTabAppMonitorClass::getAltTabAppVector()
 {
 	std::vector<AltTabAppClass> altTabAppVector = std::vector<AltTabAppClass>();
-	//acquire the lock on the map -> consistent map
-	std::lock_guard<std::mutex> lg(this->mapMutex);
 	auto i = this->map.begin();
 	auto iEnd = this->map.end();
 
@@ -90,10 +148,3 @@ std::vector<AltTabAppClass> AltTabAppMonitorClass::getAltTabAppVector()
 
 	return altTabAppVector;
 }
-
-bool AltTabAppMonitorClass::mapContainsHwnd(HWND hwnd)
-{
-	std::lock_guard<std::mutex> lg(this->mapMutex);
-	return this->map.find(hwnd) == this->map.end();
-}
-

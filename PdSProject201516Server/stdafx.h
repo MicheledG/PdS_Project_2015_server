@@ -30,6 +30,7 @@
 #include <memory>
 #include <map>
 #include <list>
+#include <deque>
 #include <mutex>
 #include <atomic>
 

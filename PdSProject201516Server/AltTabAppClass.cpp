@@ -4,9 +4,19 @@
 #define MAX_FILENAMEEXLEN 1024
 #define MAX_WNDTEXTLEN 1024
 
-//IF SOMETHING GOES WRONG DURING CONSTRUCTION RETURNS AltTabAppClass with hWnd == NULL
-AltTabAppClass::AltTabAppClass(HWND hWnd)
+AltTabAppClass::AltTabAppClass()
 {
+}
+
+//IF SOMETHING GOES WRONG DURING CONSTRUCTION RETURNS AltTabAppClass with hWnd == NULL
+AltTabAppClass::AltTabAppClass(HWND hWnd, bool empty)
+{
+	
+	if (empty) {
+		this->hWnd = hWnd;
+		return;
+	}
+	
 	if (!isAltTabApp(hWnd)) return; //let hWnd to NULL!
 
 	this->hWnd = hWnd;
