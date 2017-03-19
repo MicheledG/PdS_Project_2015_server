@@ -15,7 +15,7 @@ class AltTabAppInfoSocketTransmitterClass
 	void serveClient(SOCKET clientSocket);
 	bool sendMsgToClient(SOCKET clientSocket, std::string msg);
 	json::value createJsonAppListMessage(std::vector<AltTabAppClass> altTabAppVector);
-	json::value createJsonNotificationMessage(std::pair<notification_event_type, HWND> eventNotification);
+	json::value createJsonNotificationMessage(Notification notification);
 	json::value fromAltTabAppObjToJsonObj(AltTabAppClass altTabAppObj, bool empty = false);
 	std::tstring fromPNGToBase64(std::shared_ptr<byte> pPNGByte, int iPNGSize);
 	std::tstring fromNotificationEventEnumToTString(notification_event_type notificationEvent);

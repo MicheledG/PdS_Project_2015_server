@@ -115,7 +115,7 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 	std::unique_lock<std::mutex> mapLock(this->monitor->mapMutex);
 	std::vector<AltTabAppClass> altTabAppVector = this->monitor->getAltTabAppVector();
 	//"register" transmitter thread on the queue event
-	this->monitor->transmitterConnectedToQueue.store(true);
+	this->monitor->transmitterConnectedToNotificationQueue.store(true);
 	mapLock.unlock();
 	
 	//create initial message to send to the client
@@ -134,22 +134,22 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 
 	while (this->active.load()) {
 		
-		std::unique_lock<std::mutex> queueLock(this->monitor->eventQueueMutex);
+		std::unique_lock<std::mutex> queueLock(this->monitor->notificationQueueMutex);
 
 		//WARNING: STOP FIRST THE TRANSMITTER AND THEN THE MONITOR
 		while (true) {
-			if (!this->monitor->eventQueue.empty())
+			if (!this->monitor->notificationQueue.empty())
 				//event in the queue
 				break;
-			this->monitor->newEventInQueue.wait(queueLock);
+			this->monitor->newNotificationInQueue.wait(queueLock);
 		}
 		
-		std::pair<notification_event_type, HWND> eventNotification = this->monitor->eventQueue.front();
-		this->monitor->eventQueue.pop_front();
+		Notification notification = this->monitor->notificationQueue.front();
+		this->monitor->notificationQueue.pop_front();
 		queueLock.unlock();
 
 		//create the right message depending on the event
-		jMsg = createJsonNotificationMessage(eventNotification);
+		jMsg = createJsonNotificationMessage(notification);
 				
 		//send the message created
 		msgString = utility::conversions::to_utf8string(jMsg.serialize());
@@ -163,8 +163,8 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 
 	//"unregister" transmitter thread on the queue event
 	mapLock.lock();
-	this->monitor->transmitterConnectedToQueue.store(true);
-	this->monitor->eventQueue.clear();
+	this->monitor->transmitterConnectedToNotificationQueue.store(true);
+	this->monitor->notificationQueue.clear();
 	mapLock.unlock();
 
 	//active == false;
@@ -228,15 +228,37 @@ json::value AltTabAppInfoSocketTransmitterClass::createJsonAppListMessage(std::v
 	return jMsg;
 }
 
-json::value AltTabAppInfoSocketTransmitterClass::createJsonNotificationMessage(std::pair<notification_event_type, HWND> eventNotification)
+json::value AltTabAppInfoSocketTransmitterClass::createJsonNotificationMessage(Notification notification)
 {
 	web::json::value jMsg = web::json::value::object();
 	web::json::value jAppList = web::json::value::array();
-	AltTabAppClass notificationApp(eventNotification.second, true);
-	jAppList[0] = this->fromAltTabAppObjToJsonObj(notificationApp, true);
+	
+	//create the right list of application to send into the json according to the notification event	
+	switch (notification.notificationEvent)
+	{
+		case notification_event_type::APP_CREATE: {
+			jAppList[0] = this->fromAltTabAppObjToJsonObj(notification.appList.front());
+			break;
+		}
+		case notification_event_type::APP_DESTROY: {
+			AltTabAppClass destroyedApp(notification.appIdList.front(), true);
+			jAppList[0] = this->fromAltTabAppObjToJsonObj(destroyedApp, true);
+			break;
+		}
+		case notification_event_type::APP_FOCUS: {
+			AltTabAppClass oldFocusApp(notification.appIdList.front(), true);
+			AltTabAppClass newFocusApp(notification.appIdList.back(), true);
+			jAppList[0] = this->fromAltTabAppObjToJsonObj(oldFocusApp, true);
+			jAppList[1] = this->fromAltTabAppObjToJsonObj(newFocusApp, true);
+			break;
+		}
+	default:
+		break;
+	}
+
 	jMsg[U("app_list")] = jAppList;
-	jMsg[U("app_number")] = web::json::value::number(1);
-	std::tstring eventNotificationTString = this->fromNotificationEventEnumToTString(eventNotification.first);
+	jMsg[U("app_number")] = web::json::value::number(jAppList.size());
+	std::tstring eventNotificationTString = this->fromNotificationEventEnumToTString(notification.notificationEvent);
 	jMsg[U("notification_event")] = web::json::value::string(eventNotificationTString);
 
 	return jMsg;

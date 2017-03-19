@@ -1,5 +1,4 @@
 #pragma once
-
 #include "stdafx.h"
 #include "AltTabAppClass.h"
 
@@ -8,6 +7,12 @@ typedef enum NOTIFICATION_EVENT {
 	APP_DESTROY,
 	APP_FOCUS
 } notification_event_type;
+
+typedef struct NotificationStruct {
+	notification_event_type notificationEvent;
+	std::list<HWND> appIdList;
+	std::list<AltTabAppClass> appList;
+} Notification;
 
 class AltTabAppMonitorClass
 {
@@ -23,10 +28,10 @@ class AltTabAppMonitorClass
 	std::thread monitorThread;
 public:
 	std::mutex mapMutex;
-	std::mutex eventQueueMutex;
-	std::atomic<bool> transmitterConnectedToQueue;
-	std::condition_variable newEventInQueue;
-	std::deque<std::pair<notification_event_type, HWND>> eventQueue;
+	std::mutex notificationQueueMutex;
+	std::atomic<bool> transmitterConnectedToNotificationQueue;
+	std::condition_variable newNotificationInQueue;
+	std::deque<Notification> notificationQueue;
 	AltTabAppMonitorClass();
 	~AltTabAppMonitorClass();
 	void start();
