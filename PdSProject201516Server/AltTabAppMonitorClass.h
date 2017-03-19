@@ -24,6 +24,7 @@ class AltTabAppMonitorClass
 public:
 	std::mutex mapMutex;
 	std::mutex eventQueueMutex;
+	std::atomic<bool> transmitterConnectedToQueue;
 	std::condition_variable newEventInQueue;
 	std::deque<std::pair<notification_event_type, HWND>> eventQueue;
 	AltTabAppMonitorClass();

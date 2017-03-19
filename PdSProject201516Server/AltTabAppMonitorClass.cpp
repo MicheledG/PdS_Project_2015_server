@@ -3,6 +3,8 @@
 
 AltTabAppMonitorClass::AltTabAppMonitorClass()
 {
+	this->active.store(false);
+	this->transmitterConnectedToQueue.store(false);
 }
 
 AltTabAppMonitorClass::~AltTabAppMonitorClass()
@@ -37,22 +39,32 @@ void AltTabAppMonitorClass::monitor()
 		
 		//compare temporary and monitor map and update monitor map
 		mapLock.lock();
-		//remove closed app
+		
+		//extract all keys contained into the map
+		std::vector<HWND> mapKey;
 		for each (std::pair<HWND, AltTabAppClass> pair in this->map)
 		{
-			bool tmpMapContains = !(tmpMap.find(pair.first) == tmpMap.end());
+			mapKey.push_back(pair.first);
+		}
+
+		//remove closed app
+		for each (HWND appId in mapKey)
+		{
+			bool tmpMapContains = !(tmpMap.find(appId) == tmpMap.end());
 			if (!tmpMapContains) {
-				//the app considere is no more opened because it is not contained into the tmpMap
-				this->map.erase(pair.first);
-				//ADD EVENT TO THE QUEUE EVENT
-				std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_DESTROY, pair.first);
-				std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
-				this->eventQueue.push_back(eventNotification);
-				this->newEventInQueue.notify_one();
+				//the app considered is no more opened because it is not contained into the tmpMap
+				this->map.erase(appId);
+				if (this->transmitterConnectedToQueue.load()) {
+					//ADD EVENT TO THE QUEUE EVENT
+					std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_DESTROY, appId);
+					std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
+					this->eventQueue.push_back(eventNotification);
+					this->newEventInQueue.notify_one();
+				}
 			}
 			else {
 				//the app is still opened so check the next one
-				tmpMap.erase(pair.first);
+				tmpMap.erase(appId);
 			}
 		}
 
@@ -61,11 +73,13 @@ void AltTabAppMonitorClass::monitor()
 		{
 			//the apps still contained in the temporary map are all new
 			this->map.insert(tmpPair);
-			//ADD EVENT TO THE QUEUE EVENT
-			std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_CREATE, tmpPair.first);
-			std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
-			this->eventQueue.push_back(eventNotification);
-			this->newEventInQueue.notify_one();
+			if (this->transmitterConnectedToQueue.load()) {
+				//ADD EVENT TO THE QUEUE EVENT
+				std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_CREATE, tmpPair.first);
+				std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
+				this->eventQueue.push_back(eventNotification);
+				this->newEventInQueue.notify_one();
+			}
 		}
 
 		//check focus change
@@ -76,11 +90,13 @@ void AltTabAppMonitorClass::monitor()
 				this->map[oldFocusAppId].SetFocus(false);
 			this->map[tmpFocusAppId].SetFocus(true);
 			this->focusAppId = tmpFocusAppId;
-			//ADD EVENT TO THE QUEUE EVENT
-			std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_FOCUS, tmpFocusAppId);
-			std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
-			this->eventQueue.push_back(eventNotification);
-			this->newEventInQueue.notify_one();
+			if (this->transmitterConnectedToQueue.load()) {
+				//ADD EVENT TO THE QUEUE EVENT
+				std::pair<notification_event_type, HWND> eventNotification(notification_event_type::APP_FOCUS, tmpFocusAppId);
+				std::lock_guard<std::mutex> queueLock(this->eventQueueMutex);
+				this->eventQueue.push_back(eventNotification);
+				this->newEventInQueue.notify_one();
+			}
 		}
 
 		mapLock.unlock();

@@ -105,11 +105,17 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 	return;
 }
 
+//mapLock is used to synchronize access on the map and ensure that
+//transmitter thread registers on the queue event only when no update is in progress
+//thus after the first get of the app list, transmitter thread "notify" to monitor thread
+//to start pushing back event in the queue BEFORE the monitor thread start updating the map
 void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 {
 	//get actual list of opened alt tab app
 	std::unique_lock<std::mutex> mapLock(this->monitor->mapMutex);
 	std::vector<AltTabAppClass> altTabAppVector = this->monitor->getAltTabAppVector();
+	//"register" transmitter thread on the queue event
+	this->monitor->transmitterConnectedToQueue.store(true);
 	mapLock.unlock();
 	
 	//create initial message to send to the client
@@ -154,6 +160,12 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 		}
 
 	}
+
+	//"unregister" transmitter thread on the queue event
+	mapLock.lock();
+	this->monitor->transmitterConnectedToQueue.store(true);
+	this->monitor->eventQueue.clear();
+	mapLock.unlock();
 
 	//active == false;
 	closesocket(clientSocket);
