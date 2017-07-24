@@ -4,7 +4,6 @@
 #include "stdafx.h"
 #include "PdSProject201516Server.h"
 #include "AltTabAppMonitorClass.h"
-#include "AltTabAppInfoTransmitterClass.h"
 #include "AltTabAppInfoSocketTransmitterClass.h"
 
 #define MAX_LOADSTRING 100
@@ -17,8 +16,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 NOTIFYICONDATA nidMyTrayIcon;
 HMENU hPopMenu;
 AltTabAppMonitorClass altTabAppMonitor;
-//TO DO: improve pointer and create interface to be implemented from altTabAppMonitor	
-AltTabAppInfoTransmitterClass altTabAppInfoTransmitter(&altTabAppMonitor);
+//TO DO: improve pointer and create interface to be implemented from altTabAppMonitor
 AltTabAppInfoSocketTransmitterClass altTabAppInfoSocketTransmitter(&altTabAppMonitor);
 
 // Forward declarations of functions included in this code module:
@@ -37,7 +35,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	// TODO: Place code here.
 	altTabAppMonitor.start();
-	//altTabAppInfoTransmitter.start();
 	altTabAppInfoSocketTransmitter.start();
 
     // Initialize global strings
@@ -192,7 +189,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
 		/* close all the resources here! */
 		altTabAppInfoSocketTransmitter.stop();
-		//altTabAppInfoTransmitter.stop();
 		altTabAppMonitor.stop();
 		PostQuitMessage(0);
         break;

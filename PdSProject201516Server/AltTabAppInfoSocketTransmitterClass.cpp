@@ -175,29 +175,29 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 
 bool AltTabAppInfoSocketTransmitterClass::sendMsgToClient(SOCKET clientSocket, std::string msg) {
 
-	//int32_t msgLen = msg.length();
+	int32_t msgLen = msg.length();
 
-	///* put the message into the char buffer */
-	//std::shared_ptr<char> msgBuf = std::shared_ptr<char>(new char[msgLen + 1], [](char* ptr) {delete[] ptr; });
-	//strcpy_s(msgBuf.get(), msgLen + 1, msg.c_str());
+	/* put the message into the char buffer */
+	std::shared_ptr<char> msgBuf = std::shared_ptr<char>(new char[msgLen + 1], [](char* ptr) {delete[] ptr; });
+	strcpy_s(msgBuf.get(), msgLen + 1, msg.c_str());
 
-	///* send the msgLen => 4B = 32bit */
-	//int iResult = send(clientSocket, (char*)&msgLen, sizeof(int32_t), 0);
-	//if (iResult == SOCKET_ERROR) {
-	//	printf("send failed with error: %d\n", WSAGetLastError());
-	//	closesocket(clientSocket);
-	//	WSACleanup();
-	//	return false;
-	//}
+	/* send the msgLen => 4B = 32bit */
+	int iResult = send(clientSocket, (char*)&msgLen, sizeof(int32_t), 0);
+	if (iResult == SOCKET_ERROR) {
+		printf("send failed with error: %d\n", WSAGetLastError());
+		closesocket(clientSocket);
+		WSACleanup();
+		return false;
+	}
 
-	///* send the char buffer */
-	//iResult = send(clientSocket, msgBuf.get(), msgLen, 0);
-	//if (iResult == SOCKET_ERROR) {
-	//	printf("send failed with error: %d\n", WSAGetLastError());
-	//	closesocket(clientSocket);
-	//	WSACleanup();
-	//	return false;
-	//}
+	/* send the char buffer */
+	iResult = send(clientSocket, msgBuf.get(), msgLen, 0);
+	if (iResult == SOCKET_ERROR) {
+		printf("send failed with error: %d\n", WSAGetLastError());
+		closesocket(clientSocket);
+		WSACleanup();
+		return false;
+	}
 
 	///* wait client response */
 	//int32_t clientResponse = 0;
