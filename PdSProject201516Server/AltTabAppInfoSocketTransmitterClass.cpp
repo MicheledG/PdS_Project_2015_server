@@ -131,17 +131,15 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 	return;
 }
 
-//mapLock is used to synchronize access on the map and ensure that
-//transmitter thread registers on the queue event only when no update is in progress
-//thus after the first get of the app list, transmitter thread "notify" to monitor thread
-//to start pushing back event in the queue BEFORE the monitor thread start updating the map
+//let's start the activities to execute on the socket
 void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
-{
-	//let's start the activities to execute on the socket
+{	
 	std::thread notificationSenderThread = std::thread(&AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToClient, this, clientSocket);
+	std::thread connectionCheckerThread = std::thread(&AltTabAppInfoSocketTransmitterClass::checkConnectionStatus, this, clientSocket);
 
 	//wait the conclusion of the activies
 	notificationSenderThread.join();
+	connectionCheckerThread.join();
 
 	//close the client socket
 	closesocket(clientSocket);
@@ -191,7 +189,7 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 		queueLock.unlock();
 
 		if (notification.notificationEvent == notification_event_type::STOP) {
-			return;
+			break;
 		}
 
 		//create the right message depending on the event
@@ -216,25 +214,57 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 
 }
 
+void AltTabAppInfoSocketTransmitterClass::checkConnectionStatus(SOCKET clientSocket) {
+
+	while (this->active.load()) {
+		std::string emptyMsg = "";
+		bool connected = emptyMsg.empty();
+		connected = this->sendMsgToClient(clientSocket, emptyMsg);
+		if (connected) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		else {
+			this->notifyStop();
+			break;
+		}
+	}
+
+	return;
+
+}
+
 bool AltTabAppInfoSocketTransmitterClass::sendMsgToClient(SOCKET clientSocket, std::string msg) {
 
-	int32_t msgLen = msg.length();
+	int32_t msgLen;
+	std::shared_ptr<char> msgBuf;
 
-	/* put the message into the char buffer */
-	std::shared_ptr<char> msgBuf = std::shared_ptr<char>(new char[msgLen + 1], [](char* ptr) {delete[] ptr; });
-	strcpy_s(msgBuf.get(), msgLen + 1, msg.c_str());
-
-	/* send the msgLen => 4B = 32bit */
-	int iResult = send(clientSocket, (char*)&msgLen, sizeof(int32_t), 0);
-	if (iResult == SOCKET_ERROR) {		
-		return false;
+	if (!msg.empty()) {
+		msgLen = msg.length();
+		/* put the message into the char buffer */
+		msgBuf = std::shared_ptr<char>(new char[msgLen + 1], [](char* ptr) {delete[] ptr; });
+		strcpy_s(msgBuf.get(), msgLen + 1, msg.c_str());
 	}
-
-	/* send the char buffer */
-	iResult = send(clientSocket, msgBuf.get(), msgLen, 0);
-	if (iResult == SOCKET_ERROR) {		
-		return false;
+	else {
+		msgLen = 0;
 	}
+	 	
+	{
+		std::lock_guard<std::mutex> socketLock(this->clientSocketMutex);
+
+		/* send the msgLen => 4B = 32bit */
+		int iResult = send(clientSocket, (char*)&msgLen, sizeof(int32_t), 0);
+		if (iResult == SOCKET_ERROR) {
+			return false;
+		}
+
+		if (msgLen > 0) {
+			/* send the char buffer */
+			iResult = send(clientSocket, msgBuf.get(), msgLen, 0);
+			if (iResult == SOCKET_ERROR) {
+				return false;
+			}
+		}		
+	}	
 	
 	return true;
 }
@@ -274,8 +304,7 @@ json::value AltTabAppInfoSocketTransmitterClass::createJsonNotificationMessage(N
 		case notification_event_type::APP_FOCUS: {
 			AltTabAppClass oldFocusApp(notification.appIdList.front(), true);
 			AltTabAppClass newFocusApp(notification.appIdList.back(), true);
-			jAppList[0] = this->fromAltTabAppObjToJsonObj(oldFocusApp, true);
-			//jAppList[0] = this->fromAltTabAppObjToJsonObj(newFocusApp, true);
+			jAppList[0] = this->fromAltTabAppObjToJsonObj(oldFocusApp, true);			
 			jAppList[1] = this->fromAltTabAppObjToJsonObj(newFocusApp, true);						
 			break;
 		}
@@ -296,7 +325,8 @@ json::value AltTabAppInfoSocketTransmitterClass::fromAltTabAppObjToJsonObj(AltTa
 
 	web::json::value jApp = web::json::value::object();
 
-	jApp[U("app_id")] = json::value::number((uint64_t)altTabAppObj.GethWnd()); //use hwnd as app id both on client both on server
+	//jApp[U("app_id")] = json::value::number((uint64_t)altTabAppObj.GethWnd()); //use hwnd as app id both on client both on server
+	jApp[U("app_id")] = json::value::number((uint64_t)altTabAppObj.GetdwProcId()); //use hwnd as app id both on client both on server
 	if (empty)
 		return jApp;
 

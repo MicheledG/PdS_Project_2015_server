@@ -8,12 +8,14 @@ class AltTabAppInfoSocketTransmitterClass
 {
 	const PCSTR DEFAULT_PORT = "27015";
 	std::atomic<bool> active; //describe if the server application is still active
+	std::mutex clientSocketMutex;
 	void manageListeningSocket();
 	std::thread listeningSocketThread;
 	AltTabAppMonitorClass* monitor;
 	std::vector<std::shared_ptr<std::thread>> threadVector;
 	void serveClient(SOCKET clientSocket);	
 	void sendApplicationMonitorNotificationToClient(SOCKET clientSocket);
+	void checkConnectionStatus(SOCKET clientSocket);
 	bool sendMsgToClient(SOCKET clientSocket, std::string msg);
 	json::value createJsonAppListMessage(std::vector<AltTabAppClass> altTabAppVector);
 	json::value createJsonNotificationMessage(Notification notification);
