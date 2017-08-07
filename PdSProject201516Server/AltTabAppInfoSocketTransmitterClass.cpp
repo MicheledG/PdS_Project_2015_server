@@ -65,6 +65,10 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 		return;
 	}
 
+	//enable non blocking mode for the listening socket
+	unsigned long argp = 1;
+	ioctlsocket(ListenSocket, FIONBIO, &argp);
+
 	// Setup the TCP listening socket
 	iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
 	if (iResult == SOCKET_ERROR) {
@@ -85,17 +89,26 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 		return;
 	}
 
-	// Accept a client socket
+	// Accept a client socket at a time!!!
 	while (this->active.load()) {
 		ClientSocket = accept(ListenSocket, NULL, NULL);
+		
 		if (ClientSocket == INVALID_SOCKET) {
-			printf("accept failed with error: %d\n", WSAGetLastError());
-			closesocket(ListenSocket);
-			WSACleanup();
-			return;
+			if (WSAGetLastError() == WSAEWOULDBLOCK) {
+				//there are no pending connections on the listening socket
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				continue;
+			}
+			else {
+				int error = WSAGetLastError();
+				closesocket(ListenSocket);
+				WSACleanup();
+				return;
+			}			
 		}
-		std::thread serveClientThread = std::thread(&AltTabAppInfoSocketTransmitterClass::serveClient, this, ClientSocket);
-		serveClientThread.join();
+		
+		//connection established, serve the client!
+		serveClient(ClientSocket);
 	}
 
 	// No longer need server socket
@@ -129,18 +142,16 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 		return;
 	}
 	
-	/* sleep for a while */
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
 	while (this->active.load()) {
 		
 		std::unique_lock<std::mutex> queueLock(this->monitor->notificationQueueMutex);
 
 		//WARNING: STOP FIRST THE TRANSMITTER AND THEN THE MONITOR
 		while (true) {
-			if (!this->monitor->notificationQueue.empty())
+			if (!this->monitor->notificationQueue.empty()) {
 				//event in the queue
 				break;
+			}				
 			this->monitor->newNotificationInQueue.wait(queueLock);
 		}
 		
@@ -155,19 +166,18 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 		msgString = utility::conversions::to_utf8string(jMsg.serialize());
 		bool success = sendMsgToClient(clientSocket, msgString);
 		if (!success) {
-			closesocket(clientSocket);
-			return;
+			break;
 		}
 
 	}
 
 	//"unregister" transmitter thread on the queue event
 	mapLock.lock();
-	this->monitor->transmitterConnectedToNotificationQueue.store(true);
+	this->monitor->transmitterConnectedToNotificationQueue.store(false);
 	this->monitor->notificationQueue.clear();
 	mapLock.unlock();
 
-	//active == false;
+	//close the client socket
 	closesocket(clientSocket);
 	return;
 
@@ -183,34 +193,17 @@ bool AltTabAppInfoSocketTransmitterClass::sendMsgToClient(SOCKET clientSocket, s
 
 	/* send the msgLen => 4B = 32bit */
 	int iResult = send(clientSocket, (char*)&msgLen, sizeof(int32_t), 0);
-	if (iResult == SOCKET_ERROR) {
-		printf("send failed with error: %d\n", WSAGetLastError());
-		closesocket(clientSocket);
-		WSACleanup();
+	if (iResult == SOCKET_ERROR) {		
 		return false;
 	}
 
 	/* send the char buffer */
 	iResult = send(clientSocket, msgBuf.get(), msgLen, 0);
-	if (iResult == SOCKET_ERROR) {
-		printf("send failed with error: %d\n", WSAGetLastError());
-		closesocket(clientSocket);
-		WSACleanup();
+	if (iResult == SOCKET_ERROR) {		
 		return false;
 	}
-
-	///* wait client response */
-	//int32_t clientResponse = 0;
-	//iResult = recv(clientSocket, (char*)&clientResponse, sizeof(int32_t), 0);
-	//if (iResult != 4 || clientResponse != msgLen) {
-	//	printf("receive not complete");
-	//	closesocket(clientSocket);
-	//	WSACleanup();
-	//	return false;
-	//}
-
+	
 	return true;
-
 }
 
 json::value AltTabAppInfoSocketTransmitterClass::createJsonAppListMessage(std::vector<AltTabAppClass> altTabAppVector) {
@@ -249,7 +242,8 @@ json::value AltTabAppInfoSocketTransmitterClass::createJsonNotificationMessage(N
 			AltTabAppClass oldFocusApp(notification.appIdList.front(), true);
 			AltTabAppClass newFocusApp(notification.appIdList.back(), true);
 			jAppList[0] = this->fromAltTabAppObjToJsonObj(oldFocusApp, true);
-			jAppList[1] = this->fromAltTabAppObjToJsonObj(newFocusApp, true);
+			//jAppList[0] = this->fromAltTabAppObjToJsonObj(newFocusApp, true);
+			jAppList[1] = this->fromAltTabAppObjToJsonObj(newFocusApp, true);						
 			break;
 		}
 	default:
