@@ -16,7 +16,7 @@ typedef struct NotificationStruct {
 
 class AltTabAppMonitorClass
 {
-	const static int CHECK_WINDOW_INTERVAL = 1000; //ms
+	const static int CHECK_WINDOW_INTERVAL = 500; //ms
 	std::atomic<bool> active; //describe if the server application is still active
 	std::map<HWND, AltTabAppClass> map;
 	HWND focusAppId;

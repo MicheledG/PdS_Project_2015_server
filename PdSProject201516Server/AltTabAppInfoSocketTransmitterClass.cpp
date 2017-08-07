@@ -153,6 +153,7 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 				break;
 			}				
 			this->monitor->newNotificationInQueue.wait(queueLock);
+			//needs to notify if the connection get lost!!!
 		}
 		
 		Notification notification = this->monitor->notificationQueue.front();
