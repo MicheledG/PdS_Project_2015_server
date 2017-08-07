@@ -5,7 +5,8 @@
 typedef enum NOTIFICATION_EVENT {
 	APP_CREATE,
 	APP_DESTROY,
-	APP_FOCUS
+	APP_FOCUS,
+	STOP
 } notification_event_type;
 
 typedef struct NotificationStruct {

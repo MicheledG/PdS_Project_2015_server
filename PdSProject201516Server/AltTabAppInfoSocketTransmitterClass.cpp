@@ -20,9 +20,22 @@ void AltTabAppInfoSocketTransmitterClass::start()
 void AltTabAppInfoSocketTransmitterClass::stop()
 {
 	this->active.store(false);
+	this->notifyStop();	
 	this->listeningSocketThread.join();
 }
 
+void AltTabAppInfoSocketTransmitterClass::notifyStop() {
+
+	//add notification of STOP to interact with the background threads!!!
+	Notification notification;
+	notification.notificationEvent = notification_event_type::STOP;
+	std::unique_lock<std::mutex> queueLock(this->monitor->notificationQueueMutex);
+	this->monitor->notificationQueue.push_back(notification);
+	this->monitor->newNotificationInQueue.notify_one();
+	queueLock.unlock();
+
+
+}
 
 void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 {
@@ -124,13 +137,31 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 //to start pushing back event in the queue BEFORE the monitor thread start updating the map
 void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 {
+	//let's start the activities to execute on the socket
+	std::thread notificationSenderThread = std::thread(&AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToClient, this, clientSocket);
+
+	//wait the conclusion of the activies
+	notificationSenderThread.join();
+
+	//close the client socket
+	closesocket(clientSocket);
+	return;
+
+}
+
+//mapLock is used to synchronize access on the map and ensure that
+//transmitter thread registers on the queue event only when no update is in progress
+//thus after the first get of the app list, transmitter thread "notify" to monitor thread
+//to start pushing back event in the queue BEFORE the monitor thread start updating the map
+void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToClient(SOCKET clientSocket)
+{
 	//get actual list of opened alt tab app
 	std::unique_lock<std::mutex> mapLock(this->monitor->mapMutex);
 	std::vector<AltTabAppClass> altTabAppVector = this->monitor->getAltTabAppVector();
 	//"register" transmitter thread on the queue event
 	this->monitor->transmitterConnectedToNotificationQueue.store(true);
 	mapLock.unlock();
-	
+
 	//create initial message to send to the client
 	web::json::value jMsg = createJsonAppListMessage(altTabAppVector);
 	std::string msgString = utility::conversions::to_utf8string(jMsg.serialize());
@@ -141,9 +172,9 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 		closesocket(clientSocket);
 		return;
 	}
-	
+
 	while (this->active.load()) {
-		
+
 		std::unique_lock<std::mutex> queueLock(this->monitor->notificationQueueMutex);
 
 		//WARNING: STOP FIRST THE TRANSMITTER AND THEN THE MONITOR
@@ -151,18 +182,21 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 			if (!this->monitor->notificationQueue.empty()) {
 				//event in the queue
 				break;
-			}				
-			this->monitor->newNotificationInQueue.wait(queueLock);
-			//needs to notify if the connection get lost!!!
+			}
+			this->monitor->newNotificationInQueue.wait(queueLock);			
 		}
-		
+
 		Notification notification = this->monitor->notificationQueue.front();
 		this->monitor->notificationQueue.pop_front();
 		queueLock.unlock();
 
+		if (notification.notificationEvent == notification_event_type::STOP) {
+			return;
+		}
+
 		//create the right message depending on the event
 		jMsg = createJsonNotificationMessage(notification);
-				
+
 		//send the message created
 		msgString = utility::conversions::to_utf8string(jMsg.serialize());
 		bool success = sendMsgToClient(clientSocket, msgString);
@@ -177,9 +211,7 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 	this->monitor->transmitterConnectedToNotificationQueue.store(false);
 	this->monitor->notificationQueue.clear();
 	mapLock.unlock();
-
-	//close the client socket
-	closesocket(clientSocket);
+	
 	return;
 
 }
@@ -324,6 +356,9 @@ std::tstring AltTabAppInfoSocketTransmitterClass::fromNotificationEventEnumToTSt
 		break;
 	case notification_event_type::APP_FOCUS:
 		notificationEventString = std::tstring(L"APP_FOCUS");
+		break;
+	case notification_event_type::STOP:
+		notificationEventString = std::tstring(L"STOP");
 		break;
 	default:
 		notificationEventString = std::tstring(L"unknown notification type");
