@@ -155,10 +155,13 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 {
 	//get actual list of opened alt tab app
 	std::unique_lock<std::mutex> mapLock(this->monitor->mapMutex);
+	std::unique_lock<std::mutex> queueLock(this->monitor->notificationQueueMutex);
+	
 	std::vector<AltTabAppClass> altTabAppVector = this->monitor->getAltTabAppVector();
 	//"register" transmitter thread on the queue event
 	this->monitor->transmitterConnectedToNotificationQueue.store(true);
 	mapLock.unlock();
+	queueLock.unlock();
 
 	//create initial message to send to the client
 	web::json::value jMsg = createJsonAppListMessage(altTabAppVector);
@@ -169,11 +172,11 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 	if (!success) {
 		closesocket(clientSocket);
 		return;
-	}
+	}	
 
 	while (this->active.load()) {
-
-		std::unique_lock<std::mutex> queueLock(this->monitor->notificationQueueMutex);
+		
+		queueLock.lock();
 
 		//WARNING: STOP FIRST THE TRANSMITTER AND THEN THE MONITOR
 		while (true) {
@@ -205,10 +208,10 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 	}
 
 	//"unregister" transmitter thread on the queue event
-	mapLock.lock();
+	queueLock.lock();
 	this->monitor->transmitterConnectedToNotificationQueue.store(false);
 	this->monitor->notificationQueue.clear();
-	mapLock.unlock();
+	queueLock.unlock();
 	
 	return;
 
@@ -346,7 +349,7 @@ std::tstring AltTabAppInfoSocketTransmitterClass::fromPNGToBase64(std::shared_pt
 
 		if (iPNGSize == -1 || pPNGByte.get() == nullptr) {
 			errorString.assign(L"error retrieving app icon");
-			throw std::exception::exception();
+			throw std::exception::exception("impossible to create base 64 representation of the application icon");
 		}
 
 		//convert byte format to base64

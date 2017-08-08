@@ -35,10 +35,10 @@ void AltTabAppMonitorClass::monitor()
 		//create temporary map with the actual window opened
 		std::map<HWND, AltTabAppClass> tmpMap;
 		HWND tmpFocusAppId;
-		this->getActualOpenedApp(&tmpMap, &tmpFocusAppId);
 		
 		//compare temporary and monitor map and update monitor map
 		mapLock.lock();
+		this->getActualOpenedApp(&tmpMap, &tmpFocusAppId);			
 		
 		//extract all keys contained into the map
 		std::vector<HWND> mapKey;
@@ -158,9 +158,11 @@ BOOL CALLBACK AltTabAppMonitorClass::HandleWinDetected(HWND hwnd, LPARAM ptr)
 	return TRUE;
 }
 
-//ATTENTION: NOT THREAD SAFE!
+
+//THIS IS NOT THREAD SAFE BY ITSELF!!!
 std::vector<AltTabAppClass> AltTabAppMonitorClass::getAltTabAppVector()
 {
+		
 	std::vector<AltTabAppClass> altTabAppVector = std::vector<AltTabAppClass>();
 	auto i = this->map.begin();
 	auto iEnd = this->map.end();
@@ -169,6 +171,6 @@ std::vector<AltTabAppClass> AltTabAppMonitorClass::getAltTabAppVector()
 		//should be copied by value each AltTabAppClass object
 		altTabAppVector.push_back(i->second);
 	}
-
+		
 	return altTabAppVector;
 }
