@@ -26,6 +26,8 @@ void AltTabAppInfoSocketTransmitterClass::stop()
 
 void AltTabAppInfoSocketTransmitterClass::notifyStop() {
 
+	this->active.store(false);
+	
 	//add notification of STOP to interact with the background threads!!!
 	Notification notification;
 	notification.notificationEvent = notification_event_type::STOP;
@@ -135,10 +137,12 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 {	
 	std::thread notificationSenderThread = std::thread(&AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToClient, this, clientSocket);
+	std::thread keysReceiverThread = std::thread(&AltTabAppInfoSocketTransmitterClass::receiveKeys, this, clientSocket);
 	std::thread connectionCheckerThread = std::thread(&AltTabAppInfoSocketTransmitterClass::checkConnectionStatus, this, clientSocket);
 
 	//wait the conclusion of the activies
 	notificationSenderThread.join();
+	keysReceiverThread.join();
 	connectionCheckerThread.join();
 
 	//close the client socket
@@ -271,6 +275,84 @@ bool AltTabAppInfoSocketTransmitterClass::sendMsgToClient(SOCKET clientSocket, s
 	
 	return true;
 }
+
+std::shared_ptr<char> AltTabAppInfoSocketTransmitterClass::readNBytesFromClient(SOCKET clientSocket, int N) {
+
+	int result = 0;
+	std::shared_ptr<char> buffer(new char[N], [](char* ptr) {delete[] ptr; });
+	int bytesRead = 0;
+	int bytesToRead = N;
+	char* firstByteToRead = buffer.get();
+
+	//read bytes from the socket
+	while (bytesRead < N) {		 		
+		result = recv(clientSocket, firstByteToRead, bytesToRead, 0);
+		if (result > 0) {
+			bytesRead += result;
+			firstByteToRead += result;
+			bytesToRead -= result;			
+		}
+		else {
+			if (WSAGetLastError() == WSAEWOULDBLOCK) {
+				throw std::length_error::length_error("empty socket");
+			}
+			else {
+				throw std::exception::exception("connection error or connection closed");
+			}			
+		}		
+	}
+
+	return buffer;
+}
+
+std::string AltTabAppInfoSocketTransmitterClass::readMsgFromClient(SOCKET clientSocket) {
+
+	try {
+		//read message body length -> WARNING!!!
+		int N = 4; //int32
+		N = *((int*)this->readNBytesFromClient(clientSocket, N).get());		
+
+		//read message body (if present)
+		std::string messageBody;
+		if (N > 0) {
+			//WARNING!!!
+			std::shared_ptr<char> receivedMessageBody = this->readNBytesFromClient(clientSocket, N);
+			std::shared_ptr<char> messageBodyChar = std::shared_ptr<char>(new char[N + 1], [](char* ptr) {delete[] ptr; });
+			strncpy_s(messageBodyChar.get(), N+1, receivedMessageBody.get(), N);
+			*(messageBodyChar.get() + N) = '\0';
+			messageBody = messageBodyChar.get();
+		}
+		else {
+			messageBody = "";
+		}
+		//return message body
+		return messageBody;
+	}
+	catch (std::length_error e) {		
+		return "";		
+	}
+	catch (std::exception e) {
+		//rethrow
+		throw e;
+	}	
+}
+
+void AltTabAppInfoSocketTransmitterClass::receiveKeys(SOCKET clientSocket) {
+
+	while (this->active.load()) {		
+		try {
+			std::string message = this->readMsgFromClient(clientSocket);
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		}
+		catch (std::exception e) {
+			this->notifyStop();
+			break;
+		}
+	}
+
+	return;
+}
+
 
 json::value AltTabAppInfoSocketTransmitterClass::createJsonAppListMessage(std::vector<AltTabAppClass> altTabAppVector) {
 

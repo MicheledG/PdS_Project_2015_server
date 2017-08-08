@@ -17,6 +17,9 @@ class AltTabAppInfoSocketTransmitterClass
 	void sendApplicationMonitorNotificationToClient(SOCKET clientSocket);
 	void checkConnectionStatus(SOCKET clientSocket);
 	bool sendMsgToClient(SOCKET clientSocket, std::string msg);
+	std::shared_ptr<char> readNBytesFromClient(SOCKET clientSocket, int N);
+	std::string readMsgFromClient(SOCKET clientSocket);
+	void receiveKeys(SOCKET clientSocket);
 	json::value createJsonAppListMessage(std::vector<AltTabAppClass> altTabAppVector);
 	json::value createJsonNotificationMessage(Notification notification);
 	json::value fromAltTabAppObjToJsonObj(AltTabAppClass altTabAppObj, bool empty = false);
