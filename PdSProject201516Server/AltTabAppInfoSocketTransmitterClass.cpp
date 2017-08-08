@@ -26,14 +26,16 @@ void AltTabAppInfoSocketTransmitterClass::stop()
 
 void AltTabAppInfoSocketTransmitterClass::notifyStop() {
 
-	this->active.store(false);
+	this->activeClient.store(false);
 	
 	//add notification of STOP to interact with the background threads!!!
-	Notification notification;
-	notification.notificationEvent = notification_event_type::STOP;
 	std::unique_lock<std::mutex> queueLock(this->monitor->notificationQueueMutex);
-	this->monitor->notificationQueue.push_back(notification);
-	this->monitor->newNotificationInQueue.notify_one();
+	if (this->monitor->transmitterConnectedToNotificationQueue.load()) {
+		Notification notification;
+		notification.notificationEvent = notification_event_type::STOP;
+		this->monitor->notificationQueue.push_back(notification);
+		this->monitor->newNotificationInQueue.notify_one();
+	}	
 	queueLock.unlock();
 
 
@@ -136,6 +138,8 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 //let's start the activities to execute on the socket
 void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 {	
+	this->activeClient.store(true);
+	
 	std::thread notificationSenderThread = std::thread(&AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToClient, this, clientSocket);
 	std::thread keysReceiverThread = std::thread(&AltTabAppInfoSocketTransmitterClass::receiveKeys, this, clientSocket);
 	std::thread connectionCheckerThread = std::thread(&AltTabAppInfoSocketTransmitterClass::checkConnectionStatus, this, clientSocket);
@@ -174,11 +178,10 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 	//send message to the client
 	bool success = sendMsgToClient(clientSocket, msgString);
 	if (!success) {
-		closesocket(clientSocket);
 		return;
 	}	
 
-	while (this->active.load()) {
+	while (this->activeClient.load()) {
 		
 		queueLock.lock();
 
@@ -211,6 +214,9 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 
 	}
 
+	if (this->activeClient.load()) {
+		this->activeClient.store(false);
+	}
 	//"unregister" transmitter thread on the queue event
 	queueLock.lock();
 	this->monitor->transmitterConnectedToNotificationQueue.store(false);
@@ -223,7 +229,7 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 
 void AltTabAppInfoSocketTransmitterClass::checkConnectionStatus(SOCKET clientSocket) {
 
-	while (this->active.load()) {
+	while (this->activeClient.load()) {
 		std::string emptyMsg = "";
 		bool connected = emptyMsg.empty();
 		connected = this->sendMsgToClient(clientSocket, emptyMsg);
@@ -294,7 +300,8 @@ std::shared_ptr<char> AltTabAppInfoSocketTransmitterClass::readNBytesFromClient(
 		}
 		else {
 			if (WSAGetLastError() == WSAEWOULDBLOCK) {
-				throw std::length_error::length_error("empty socket");
+				*(buffer.get()) = 'Z';
+				break;
 			}
 			else {
 				throw std::exception::exception("connection error or connection closed");
@@ -308,9 +315,13 @@ std::shared_ptr<char> AltTabAppInfoSocketTransmitterClass::readNBytesFromClient(
 std::string AltTabAppInfoSocketTransmitterClass::readMsgFromClient(SOCKET clientSocket) {
 
 	try {
-		//read message body length -> WARNING!!!
+		//read message body length
 		int N = 4; //int32
-		N = *((int*)this->readNBytesFromClient(clientSocket, N).get());		
+		std::shared_ptr<char> bytesRead = this->readNBytesFromClient(clientSocket, N);
+		if (*bytesRead.get() == 'Z') {
+			return "";
+		}
+		N = *((int*)bytesRead.get());		
 
 		//read message body (if present)
 		std::string messageBody;
@@ -327,10 +338,7 @@ std::string AltTabAppInfoSocketTransmitterClass::readMsgFromClient(SOCKET client
 		}
 		//return message body
 		return messageBody;
-	}
-	catch (std::length_error e) {		
-		return "";		
-	}
+	}	
 	catch (std::exception e) {
 		//rethrow
 		throw e;
@@ -339,10 +347,18 @@ std::string AltTabAppInfoSocketTransmitterClass::readMsgFromClient(SOCKET client
 
 void AltTabAppInfoSocketTransmitterClass::receiveKeys(SOCKET clientSocket) {
 
-	while (this->active.load()) {		
+	while (this->activeClient.load()) {		
 		try {
 			std::string message = this->readMsgFromClient(clientSocket);
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+			if (!message.empty()) {
+				//extract the json message from the string				
+				web::json::value keysReceived = json::value::parse(utility::conversions::to_string_t(message));
+				//send the json message to the method that invoke the key shortcut
+				this->executeKeys(keysReceived);
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 		catch (std::exception e) {
 			this->notifyStop();
@@ -353,6 +369,31 @@ void AltTabAppInfoSocketTransmitterClass::receiveKeys(SOCKET clientSocket) {
 	return;
 }
 
+void AltTabAppInfoSocketTransmitterClass::executeKeys(web::json::value keys) {
+
+	int numberOfActions = keys.at(U("shortcut_actions_number")).as_number().to_int32();
+	json::array actions = keys.at(U("shortcut_actions")).as_array();
+		
+	std::shared_ptr<INPUT> inputs = std::shared_ptr<INPUT>(new INPUT[numberOfActions], [](INPUT* ptr) { delete[] ptr; return; });
+	for (int i = 0; i < numberOfActions; i++) {
+		KEYBDINPUT keyboardInput;
+		keyboardInput.wVk = actions[i].at(U("key_virtual_code")).as_number().to_int32();
+		if (!actions[i].at(U("is_down")).as_bool()) {
+			keyboardInput.dwFlags = KEYEVENTF_KEYUP;
+		}
+		INPUT input;
+		input.type = INPUT_KEYBOARD;
+		input.ki = keyboardInput;
+
+		*(inputs.get() + i) = input;
+	}
+
+
+	int actionsExecuted = SendInput(numberOfActions, (LPINPUT) inputs.get(), sizeof(INPUT));
+
+	return;
+
+}
 
 json::value AltTabAppInfoSocketTransmitterClass::createJsonAppListMessage(std::vector<AltTabAppClass> altTabAppVector) {
 
@@ -386,7 +427,7 @@ json::value AltTabAppInfoSocketTransmitterClass::createJsonNotificationMessage(N
 			jAppList[0] = this->fromAltTabAppObjToJsonObj(destroyedApp, true);
 			break;
 		}
-		case notification_event_type::APP_FOCUS: {
+		case notification_event_type::APP_FOCUS: {			
 			AltTabAppClass oldFocusApp(notification.appIdList.front(), true);
 			AltTabAppClass newFocusApp(notification.appIdList.back(), true);
 			jAppList[0] = this->fromAltTabAppObjToJsonObj(oldFocusApp, true);			
@@ -409,7 +450,7 @@ json::value AltTabAppInfoSocketTransmitterClass::fromAltTabAppObjToJsonObj(AltTa
 {
 
 	web::json::value jApp = web::json::value::object();
-
+	
 	jApp[U("app_id")] = json::value::number((uint64_t)altTabAppObj.GethWnd()); //use hwnd as app id both on client both on server
 	jApp[U("process_id")] = json::value::number((uint64_t)altTabAppObj.GetdwProcId());
 	if (empty) {
