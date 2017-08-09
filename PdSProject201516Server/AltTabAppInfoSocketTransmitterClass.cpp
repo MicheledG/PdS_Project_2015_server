@@ -113,7 +113,7 @@ void AltTabAppInfoSocketTransmitterClass::manageListeningSocket()
 		if (ClientSocket == INVALID_SOCKET) {
 			if (WSAGetLastError() == WSAEWOULDBLOCK) {
 				//there are no pending connections on the listening socket
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				std::this_thread::sleep_for(std::chrono::milliseconds(this->CHECK_PENDING_CLIENT_RATE));
 				continue;
 			}
 			else {
@@ -234,7 +234,7 @@ void AltTabAppInfoSocketTransmitterClass::checkConnectionStatus(SOCKET clientSoc
 		bool connected = emptyMsg.empty();
 		connected = this->sendMsgToClient(clientSocket, emptyMsg);
 		if (connected) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			std::this_thread::sleep_for(std::chrono::milliseconds(this->CHECK_CONNECTION_STATUS_RATE));
 		}
 		else {
 			this->notifyStop();
@@ -349,7 +349,7 @@ void AltTabAppInfoSocketTransmitterClass::receiveKeys(SOCKET clientSocket) {
 
 	while (this->activeClient.load()) {		
 		try {
-			std::string message = this->readMsgFromClient(clientSocket);
+			std::string message = this->readMsgFromClient(clientSocket); //THE SOCKET IS NON BLOCKING (BECAUSE IT IS SET IN THIS WAY)
 
 			if (!message.empty()) {
 				//extract the json message from the string				
@@ -358,7 +358,7 @@ void AltTabAppInfoSocketTransmitterClass::receiveKeys(SOCKET clientSocket) {
 				this->executeKeys(keysReceived);
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			std::this_thread::sleep_for(std::chrono::milliseconds(this->CHECK_NEW_MESSAGE_RATE));
 		}
 		catch (std::exception e) {
 			this->notifyStop();

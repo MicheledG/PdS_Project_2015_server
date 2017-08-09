@@ -7,6 +7,9 @@ using namespace web;
 class AltTabAppInfoSocketTransmitterClass
 {
 	const PCSTR DEFAULT_PORT = "27015";
+	const int CHECK_PENDING_CLIENT_RATE = 100; //ms
+	const int CHECK_CONNECTION_STATUS_RATE = 100; //ms
+	const int CHECK_NEW_MESSAGE_RATE = 10; //ms
 	std::atomic<bool> active; //describe if the server application is still active
 	std::atomic<bool> activeClient;
 	std::mutex clientSocketMutex;
