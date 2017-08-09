@@ -312,6 +312,7 @@ std::shared_ptr<char> AltTabAppInfoSocketTransmitterClass::readNBytesFromClient(
 	return buffer;
 }
 
+//this function does not need the lock on the socket because there is only one thread reading on it! => keysReceiverThread!
 std::string AltTabAppInfoSocketTransmitterClass::readMsgFromClient(SOCKET clientSocket) {
 
 	try {
@@ -327,7 +328,16 @@ std::string AltTabAppInfoSocketTransmitterClass::readMsgFromClient(SOCKET client
 		std::string messageBody;
 		if (N > 0) {
 			//WARNING!!!
-			std::shared_ptr<char> receivedMessageBody = this->readNBytesFromClient(clientSocket, N);
+			std::shared_ptr<char> receivedMessageBody;
+			while (this->activeClient.load()) {
+				receivedMessageBody = this->readNBytesFromClient(clientSocket, N);
+				if (*receivedMessageBody.get() == 'Z') {
+					continue;
+				}
+				else {
+					break;
+				}
+			} 
 			std::shared_ptr<char> messageBodyChar = std::shared_ptr<char>(new char[N + 1], [](char* ptr) {delete[] ptr; });
 			strncpy_s(messageBodyChar.get(), N+1, receivedMessageBody.get(), N);
 			*(messageBodyChar.get() + N) = '\0';
