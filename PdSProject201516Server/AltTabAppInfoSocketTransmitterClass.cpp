@@ -451,11 +451,17 @@ json::value AltTabAppInfoSocketTransmitterClass::fromAltTabAppObjToJsonObj(AltTa
 
 	web::json::value jApp = web::json::value::object();
 	
-	jApp[U("app_id")] = json::value::number((uint64_t)altTabAppObj.GethWnd()); //use hwnd as app id both on client both on server
-	jApp[U("process_id")] = json::value::number((uint64_t)altTabAppObj.GetdwProcId());
+	if (altTabAppObj.GethWnd() != NULL) {
+		jApp[U("app_id")] = json::value::number((uint64_t)altTabAppObj.GethWnd()); //use hwnd as app id both on client both on server
+	}
+	else {
+		jApp[U("app_id")] = json::value::number(-1);
+	}
+		
 	if (empty) {
 		return jApp;
-	}		
+	}
+	jApp[U("process_id")] = json::value::number((uint64_t)altTabAppObj.GetdwProcId());
 	jApp[U("app_name")] = json::value::string(altTabAppObj.GettstrAppName());
 	jApp[U("window_text")] = json::value::string(altTabAppObj.GettstrWndText());
 	jApp[U("focus")] = json::value::boolean(altTabAppObj.GetFocus());

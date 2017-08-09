@@ -91,9 +91,13 @@ void AltTabAppMonitorClass::monitor()
 		HWND oldFocusAppId = this->focusAppId;
 		if (oldFocusAppId != tmpFocusAppId) {
 			bool mapContains = !(this->map.find(oldFocusAppId) == this->map.end());
-			if(mapContains)
+			if (mapContains) {
 				this->map[oldFocusAppId].SetFocus(false);
-			this->map[tmpFocusAppId].SetFocus(true);
+			}
+			mapContains = !(this->map.find(tmpFocusAppId) == this->map.end());
+			if (mapContains) {
+				this->map[tmpFocusAppId].SetFocus(true);
+			}			
 			this->focusAppId = tmpFocusAppId;
 			if (this->transmitterConnectedToNotificationQueue.load()) {
 				//ADD EVENT TO THE QUEUE EVENT
@@ -126,9 +130,14 @@ void AltTabAppMonitorClass::monitor()
 	HWND tmpFocusAppId = GetForegroundWindow();
 	bool mapContainsHwnd = !(appMap->find(tmpFocusAppId) == appMap->end());
 	if (tmpFocusAppId != NULL && mapContainsHwnd) {
-		appMap->find(tmpFocusAppId)->second.SetFocus(true);
+		appMap->find(tmpFocusAppId)->second.SetFocus(true);		
 		*focusAppId = tmpFocusAppId;
 	}
+	else if(!mapContainsHwnd)
+	{
+		*focusAppId = NULL;
+	}
+	
 	DWORD error = GetLastError();
 	
 	return;
