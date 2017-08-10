@@ -391,6 +391,9 @@ void AltTabAppInfoSocketTransmitterClass::executeKeys(web::json::value keys) {
 		if (!actions[i].at(U("is_down")).as_bool()) {
 			keyboardInput.dwFlags = KEYEVENTF_KEYUP;
 		}
+		else {
+			keyboardInput.dwFlags = 0;
+		}
 		INPUT input;
 		input.type = INPUT_KEYBOARD;
 		input.ki = keyboardInput;
