@@ -49,8 +49,7 @@ class AltTabAppClass {
 public:
 	AltTabAppClass();
 	AltTabAppClass(HWND hWnd, bool empty = false);
-	~AltTabAppClass();
-	bool AttachAppMsgQueue(AttachModeT mode);
+	~AltTabAppClass();	
 	void SetFocus(bool hasFocus);
 	bool GetFocus();
 	HWND GethWnd();

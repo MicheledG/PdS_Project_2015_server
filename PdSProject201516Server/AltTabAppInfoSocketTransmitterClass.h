@@ -11,12 +11,11 @@ class AltTabAppInfoSocketTransmitterClass
 	const int CHECK_CONNECTION_STATUS_RATE = 100; //ms
 	const int CHECK_NEW_MESSAGE_RATE = 10; //ms
 	std::atomic<bool> active; //describe if the server application is still active
-	std::atomic<bool> activeClient;
+	std::atomic<bool> activeClient; //describe if the client is still active
 	std::mutex clientSocketMutex;
 	void manageListeningSocket();
 	std::thread listeningSocketThread;
-	AltTabAppMonitorClass* monitor;
-	std::vector<std::shared_ptr<std::thread>> threadVector;
+	AltTabAppMonitorClass* monitor;	
 	void serveClient(SOCKET clientSocket);	
 	void sendApplicationMonitorNotificationToClient(SOCKET clientSocket);
 	void checkConnectionStatus(SOCKET clientSocket);

@@ -60,13 +60,6 @@ AltTabAppClass::~AltTabAppClass()
 {
 }
 
-bool AltTabAppClass::AttachAppMsgQueue(AttachModeT mode)
-{
-	if(AttachThreadInput(dwThrdId, GetCurrentThreadId(), mode)) return true;
-	else return false;
-}
-
-
 void AltTabAppClass::SetFocus(bool hasFocus)
 {
 	focus = hasFocus;
@@ -144,8 +137,10 @@ bool AltTabAppClass::isAltTabApp(HWND hWnd)
 	
 	HWND hWndTry, hWndWalk = NULL;
 
-	if (!IsWindowVisible(hWnd))
+	if (!IsWindowVisible(hWnd)) {
 		return false;
+	}
+		
 
 	//check if hWnd is the last active popup of the ancestor, if not discard
 	hWndTry = GetAncestor(hWnd, GA_ROOTOWNER);
@@ -153,11 +148,14 @@ bool AltTabAppClass::isAltTabApp(HWND hWnd)
 	{
 		hWndWalk = hWndTry;
 		hWndTry = GetLastActivePopup(hWndWalk);
-		if (IsWindowVisible(hWndTry))
+		if (IsWindowVisible(hWndTry)) {
 			break;
+		}
+			
 	}
-	if (hWndWalk != hWnd)
+	if (hWndWalk != hWnd) {
 		return false;
+	}		
 
 	bool isToolWindow = (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) == WS_EX_TOOLWINDOW;
 	bool isNotAppWindow = (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_APPWINDOW) != WS_EX_APPWINDOW;
@@ -168,20 +166,9 @@ bool AltTabAppClass::isAltTabApp(HWND hWnd)
 		cloakedVal = 0;
 	}
 	bool isWin10Visible = cloakedVal != 0 ? false : true;
-	if (!(isToolWindow && isNotAppWindow) && isWin10Visible)
+	if (!(isToolWindow && isNotAppWindow) && isWin10Visible) {
 		return true;
-
-	//// the following removes some task tray programs and "Program Manager"
-	//TITLEBARINFO ti;
-	//ti.cbSize = sizeof(ti);
-	//GetTitleBarInfo(hWnd, &ti);
-	//if (ti.rgstate[0] & STATE_SYSTEM_INVISIBLE)
-	//	return false;
-
-	//// Tool windows should not be displayed either, these do not appear in the
-	//// task bar.
-	//if (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW)
-	//	return false;
+	}		
 	
 	return false;
 }
@@ -370,8 +357,7 @@ int AltTabAppClass::GetAppBitmapStream(HICON appHIcon, IStream *pPngStream) {
 		return -1;
 	}
 		
-	/* extract the bitmap */
-	//Gdiplus::Bitmap *pBitmap = new Gdiplus::Bitmap(appHIcon);
+	/* extract the bitmap */	
 	Gdiplus::Bitmap *pBitmap = Gdiplus::Bitmap::FromHICON(appHIcon);
 
 	if (SaveBitmapToPngStream(pBitmap, pPngStream) == -1) {

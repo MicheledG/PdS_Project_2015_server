@@ -155,10 +155,6 @@ void AltTabAppInfoSocketTransmitterClass::serveClient(SOCKET clientSocket)
 
 }
 
-//mapLock is used to synchronize access on the map and ensure that
-//transmitter thread registers on the queue event only when no update is in progress
-//thus after the first get of the app list, transmitter thread "notify" to monitor thread
-//to start pushing back event in the queue BEFORE the monitor thread start updating the map
 void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToClient(SOCKET clientSocket)
 {
 	//get actual list of opened alt tab app
@@ -223,6 +219,59 @@ void AltTabAppInfoSocketTransmitterClass::sendApplicationMonitorNotificationToCl
 	this->monitor->notificationQueue.clear();
 	queueLock.unlock();
 	
+	return;
+
+}
+
+void AltTabAppInfoSocketTransmitterClass::receiveKeys(SOCKET clientSocket) {
+
+	while (this->activeClient.load()) {
+		try {
+			std::string message = this->readMsgFromClient(clientSocket); //THE SOCKET IS NON BLOCKING (BECAUSE IT IS SET IN THIS WAY)
+
+			if (!message.empty()) {
+				//extract the json message from the string				
+				web::json::value keysReceived = json::value::parse(utility::conversions::to_string_t(message));
+				//send the json message to the method that invoke the key shortcut
+				this->executeKeys(keysReceived);
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(this->CHECK_NEW_MESSAGE_RATE));
+		}
+		catch (std::exception e) {
+			this->notifyStop();
+			break;
+		}
+	}
+
+	return;
+}
+
+void AltTabAppInfoSocketTransmitterClass::executeKeys(web::json::value keys) {
+
+	int numberOfActions = keys.at(U("shortcut_actions_number")).as_number().to_int32();
+	json::array actions = keys.at(U("shortcut_actions")).as_array();
+
+	std::shared_ptr<INPUT> inputs = std::shared_ptr<INPUT>(new INPUT[numberOfActions], [](INPUT* ptr) { delete[] ptr; return; });
+	for (int i = 0; i < numberOfActions; i++) {
+		KEYBDINPUT keyboardInput;
+		keyboardInput.wVk = actions[i].at(U("key_virtual_code")).as_number().to_int32();
+		if (!actions[i].at(U("is_down")).as_bool()) {
+			keyboardInput.dwFlags = KEYEVENTF_KEYUP;
+		}
+		else {
+			keyboardInput.dwFlags = 0;
+		}
+		INPUT input;
+		input.type = INPUT_KEYBOARD;
+		input.ki = keyboardInput;
+
+		*(inputs.get() + i) = input;
+	}
+
+
+	int actionsExecuted = SendInput(numberOfActions, (LPINPUT)inputs.get(), sizeof(INPUT));
+
 	return;
 
 }
@@ -353,59 +402,6 @@ std::string AltTabAppInfoSocketTransmitterClass::readMsgFromClient(SOCKET client
 		//rethrow
 		throw e;
 	}	
-}
-
-void AltTabAppInfoSocketTransmitterClass::receiveKeys(SOCKET clientSocket) {
-
-	while (this->activeClient.load()) {		
-		try {
-			std::string message = this->readMsgFromClient(clientSocket); //THE SOCKET IS NON BLOCKING (BECAUSE IT IS SET IN THIS WAY)
-
-			if (!message.empty()) {
-				//extract the json message from the string				
-				web::json::value keysReceived = json::value::parse(utility::conversions::to_string_t(message));
-				//send the json message to the method that invoke the key shortcut
-				this->executeKeys(keysReceived);
-			}
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(this->CHECK_NEW_MESSAGE_RATE));
-		}
-		catch (std::exception e) {
-			this->notifyStop();
-			break;
-		}
-	}
-
-	return;
-}
-
-void AltTabAppInfoSocketTransmitterClass::executeKeys(web::json::value keys) {
-
-	int numberOfActions = keys.at(U("shortcut_actions_number")).as_number().to_int32();
-	json::array actions = keys.at(U("shortcut_actions")).as_array();
-		
-	std::shared_ptr<INPUT> inputs = std::shared_ptr<INPUT>(new INPUT[numberOfActions], [](INPUT* ptr) { delete[] ptr; return; });
-	for (int i = 0; i < numberOfActions; i++) {
-		KEYBDINPUT keyboardInput;
-		keyboardInput.wVk = actions[i].at(U("key_virtual_code")).as_number().to_int32();
-		if (!actions[i].at(U("is_down")).as_bool()) {
-			keyboardInput.dwFlags = KEYEVENTF_KEYUP;
-		}
-		else {
-			keyboardInput.dwFlags = 0;
-		}
-		INPUT input;
-		input.type = INPUT_KEYBOARD;
-		input.ki = keyboardInput;
-
-		*(inputs.get() + i) = input;
-	}
-
-
-	int actionsExecuted = SendInput(numberOfActions, (LPINPUT) inputs.get(), sizeof(INPUT));
-
-	return;
-
 }
 
 json::value AltTabAppInfoSocketTransmitterClass::createJsonAppListMessage(std::vector<AltTabAppClass> altTabAppVector) {
