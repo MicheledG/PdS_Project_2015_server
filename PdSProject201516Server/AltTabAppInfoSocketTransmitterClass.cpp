@@ -339,6 +339,8 @@ std::shared_ptr<char> AltTabAppInfoSocketTransmitterClass::readNBytesFromClient(
 	int bytesToRead = N;
 	char* firstByteToRead = buffer.get();
 
+	int tries = 10;
+
 	//read bytes from the socket
 	while (bytesRead < N) {		 		
 		result = recv(clientSocket, firstByteToRead, bytesToRead, 0);
@@ -349,8 +351,15 @@ std::shared_ptr<char> AltTabAppInfoSocketTransmitterClass::readNBytesFromClient(
 		}
 		else {
 			if (WSAGetLastError() == WSAEWOULDBLOCK) {
-				*(buffer.get()) = 'Z';
-				break;
+				if (tries > 0 && N > 4) {
+					tries--;
+					std::this_thread::yield();
+					continue;
+				}
+				else {
+					*(buffer.get()) = 'Z';
+					break;
+				}				
 			}
 			else {
 				throw std::exception::exception("connection error or connection closed");
